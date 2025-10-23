@@ -1,0 +1,888 @@
+<!--
+✅ Amélioration libellés champs catégories pour affichage sur une seule ligne ("Simple" et "Francophone")
+✅ Affichage des jours actifs sur une seule ligne (7 colonnes au lieu de 4)
+✅ Ajout pourcentage de répartition des appels par catégorie (tableau Résultats)
+📅 19 octobre 2025 — Martial Demots
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulateur de rotations — V2.7.3</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    :root{
+      --primary:#3b82f6;--primary-dark:#2563eb;--primary-light:#60a5fa;
+      --success:#10b981;--warning:#f59e0b;--danger:#ef4444;
+      --bg:#0f172a;--surface:#1e293b;--surface-light:#334155;
+      --text:#f1f5f9;--text-muted:#94a3b8;--border:#475569;
+      --cat-P:#8b5cf6;--cat-A:#ef4444;--cat-B:#10b981;--cat-C:#ffa201;--cat-D:#ec4899;--cat-E:#6366f1;
+      --cat-S:#4490c0;--cat-R:#f97316;--cat-G:#a855f7;--cat-H:#06b6d4;--cat-I:#84cc16;--cat-J:#f43f5e;
+      --cat-K:#a698c8;--cat-L:#06b6d4;--cat-M:#10b981;--cat-N:#a8c32e;--cat-O:#ec4899;--cat-Q:#6366f1;
+      --cat-T:#14b8a6;--cat-U:#f97316;--cat-V:#a855f7;--cat-W:#84cc16;--cat-X:#f43f5e;--cat-Y:#8b5cf6;--cat-Z:#06b6d4;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;padding:20px}
+    .container{max-width:1600px;margin:0 auto}
+    .header{background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:20px;padding:32px;margin-bottom:24px;box-shadow:0 20px 60px rgba(59,130,246,0.3);position:relative;overflow:hidden}
+    .header::before{content:'';position:absolute;top:0;right:0;width:300px;height:300px;background:radial-gradient(circle,rgba(255,255,255,0.1),transparent);border-radius:50%;transform:translate(50%,-50%)}
+    .header-content{position:relative;z-index:1}
+    h1{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-0.02em;margin-bottom:8px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.8));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .version{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px)}
+    .version:hover{background:rgba(255,255,255,0.3);transform:translateY(-2px)}
+    .subtitle{color:rgba(255,255,255,0.9);font-size:15px;margin-top:12px;line-height:1.6}
+    .tabs{display:flex;gap:8px;margin-bottom:24px;background:var(--surface);padding:8px;border-radius:16px;border:1px solid var(--border)}
+    .tab{flex:1;padding:12px 20px;background:transparent;color:var(--text-muted);border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .tab:hover{background:var(--surface-light);color:var(--text)}
+    .tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(59,130,246,0.4)}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:transform 0.3s,box-shadow 0.3s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.4)}
+    .card-header{background:var(--surface-light);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .card-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+    .card-body{padding:24px}
+    .btn{appearance:none;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.3s;display:inline-flex;align-items:center;gap:6px}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,0.4)}
+    .btn-secondary{background:var(--surface-light);color:var(--text);border:1px solid var(--border)}
+    .btn-secondary:hover{background:var(--border);transform:translateY(-2px)}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-danger:hover{background:#dc2626;transform:translateY(-2px);box-shadow:0 6px 20px rgba(239,68,68,0.4)}
+    .btn-sm{padding:6px 14px;font-size:13px}
+    input,select{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;transition:all 0.3s}
+    input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,130,246,0.2)}
+    label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+    .grid{display:grid;gap:16px}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:repeat(3,1fr)}
+    .grid-4{grid-template-columns:repeat(4,1fr)}
+    @media(max-width:1200px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+    .stat{background:linear-gradient(135deg,var(--surface-light),var(--surface));border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+    .stat::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--primary)}
+    .stat-label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+    .stat-value{font-size:28px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
+    .stat-value.editable{background:transparent;border:none;color:var(--text);padding:0;width:100%;font-size:28px;font-weight:800}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:700;min-width:48px;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+    .cat-P{background:var(--cat-P);color:#fff}.cat-A{background:var(--cat-A);color:#fff}.cat-B{background:var(--cat-B);color:#fff}
+    .cat-C{background:var(--cat-C);color:#fff}.cat-D{background:var(--cat-D);color:#fff}.cat-E{background:var(--cat-E);color:#fff}
+    .cat-S{background:var(--cat-S);color:#fff}.cat-R{background:var(--cat-R);color:#fff}.cat-G{background:var(--cat-G);color:#fff}
+    .cat-H{background:var(--cat-H);color:#fff}.cat-I{background:var(--cat-I);color:#fff}.cat-J{background:var(--cat-J);color:#fff}
+    .cat-K{background:var(--cat-K);color:#fff}.cat-L{background:var(--cat-L);color:#fff}.cat-M{background:var(--cat-M);color:#fff}
+    .cat-N{background:var(--cat-N);color:#fff}.cat-O{background:var(--cat-O);color:#fff}.cat-Q{background:var(--cat-Q);color:#fff}
+    .cat-T{background:var(--cat-T);color:#fff}.cat-U{background:var(--cat-U);color:#fff}.cat-V{background:var(--cat-V);color:#fff}
+    .cat-W{background:var(--cat-W);color:#fff}.cat-X{background:var(--cat-X);color:#fff}.cat-Y{background:var(--cat-Y);color:#fff}.cat-Z{background:var(--cat-Z);color:#fff}
+    .cat-neutral{background:var(--surface-light);color:var(--text-muted)}
+    .category-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;transition:all 0.3s}
+    .category-card:hover{border-color:var(--primary);box-shadow:0 4px 16px rgba(59,130,246,0.2)}
+    .category-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .slot-rules-section{border-top:1px solid var(--border);padding-top:16px;margin-top:16px}
+    .slot-rules-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:12px;background:var(--bg);border-radius:8px;transition:all 0.3s}
+    .slot-rules-toggle:hover{background:var(--surface-light)}
+    .slot-rules-content{display:none;margin-top:12px}
+    .slot-rules-content.open{display:block}
+    .slot-rule{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+    .slot-rule-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .slot-tag{background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700}
+    .alert{background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(220,38,38,0.1));border:1px solid rgba(239,68,68,0.3);border-left:4px solid var(--danger);border-radius:12px;padding:16px 20px;margin-bottom:20px}
+    .alert-title{font-weight:700;margin-bottom:8px;color:#fca5a5}
+    .alert-list{padding-left:20px;line-height:1.7}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:14px;text-align:left;border-bottom:1px solid var(--border)}
+    th{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)}
+    tr:hover{background:var(--bg)}
+    .checkbox-wrapper{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);border-radius:10px;cursor:pointer;transition:all 0.3s}
+    .checkbox-wrapper:hover{background:var(--surface-light)}
+    .checkbox-wrapper input[type="checkbox"]{width:20px;height:20px;cursor:pointer;accent-color:var(--primary)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+    .chart-container{position:relative;height:400px;margin-top:20px}
+    .heatmap{display:grid;grid-template-columns:60px repeat(24,1fr);gap:4px;margin-top:20px}
+    .heatmap-label{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-muted)}
+    .heatmap-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transition:all 0.3s;cursor:pointer;border:1px solid var(--border)}
+    .heatmap-cell:hover{transform:scale(1.1);z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5)}
+    .heatmap-header{grid-column:1 / -1;display:grid;grid-template-columns:60px repeat(24,1fr);gap:4px;margin-bottom:8px}
+    .week-selector{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .day-btn{padding:8px 16px;background:var(--surface-light);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;transition:all 0.3s;font-weight:600;font-size:13px}
+    .day-btn:hover{background:var(--border)}
+    .day-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .clock-row{display:grid;grid-template-columns:120px 120px 1fr auto;gap:12px;align-items:center;padding:12px;background:var(--surface);border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
+    .clock-label{font-weight:600;color:var(--text-muted);font-size:13px}
+    .positions-badge{background:var(--primary);color:#fff;padding:6px 12px;border-radius:20px;font-weight:700;font-size:14px;text-align:center}
+    .toggle-clock{background:var(--surface-light);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:all 0.3s;margin-bottom:12px}
+    .toggle-clock:hover{background:var(--border)}
+    .toggle-clock.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .clock-content{display:none;margin-top:12px}
+    .clock-content.open{display:block}
+    .day-checkboxes{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px}
+    .day-checkbox-item{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--bg);border-radius:6px;cursor:pointer;transition:all 0.3s;border:1px solid var(--border)}
+    .day-checkbox-item:hover{background:var(--surface-light)}
+    .day-checkbox-item.checked{background:var(--primary);border-color:var(--primary)}
+    .day-checkbox-item input[type="checkbox"]{cursor:pointer;accent-color:var(--primary)}
+    .day-checkbox-item label{margin:0;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:normal;font-weight:600;color:var(--text)}
+    .day-checkbox-item.checked label{color:#fff}
+    .footer{text-align:center;color:var(--text-muted);font-size:13px;margin-top:40px;padding:20px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.3s}
+    .modal[aria-hidden="false"]{display:flex}
+    .modal-panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:600px;width:92%;max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:slideUp 0.3s}
+    .modal-header{background:var(--surface-light);padding:24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .modal-body{padding:24px;overflow-y:auto;max-height:calc(80vh - 80px)}
+    .modal-body ul{padding-left:20px;line-height:1.8}
+    .modal-body li{margin-bottom:12px}
+    .modal-body strong{color:var(--primary-light)}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-content">
+        <h1>🎵 Simulateur de rotations</h1>
+        <div class="version" id="version">V2.7.3</div>
+        <p class="subtitle">Planifie, visualise et analyse les rotations musicales avec paramétres personnalisés</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+   <button class="tab active" data-tab="config">⚙️ Configuration</button>
+  <button class="tab" data-tab="clock">🕐 Format Clock</button>
+  <button class="tab" data-tab="quotas">🇫🇷 Quotas français</button>
+  <button class="tab" data-tab="hourly">📊 Répartition horaire</button>
+  <button class="tab" data-tab="weekly">📅 Vue hebdomadaire</button>
+  <button class="tab" data-tab="heatmap">🔥 Heatmap de densité</button>
+    </div>
+    <div class="tab-content" id="tab-quotas">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span>🇫🇷</span><span>Calcul des quotas français</span></div>
+    </div>
+    <div class="card-body">
+      <p style="color:var(--text-muted);margin-bottom:24px">Heures d'écoute significative :<br>• Lun-Ven : 6h00-22h30<br>• Samedi : 6h30-22h30<br>• Dimanche : 7h00-22h30</p>
+      
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">🎵 Total titres FR</div>
+          <div class="stat-value" id="totalFrenchTitles">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">📻 Appels FR/semaine</div>
+          <div class="stat-value" id="totalFrenchCalls">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">⏰ Appels FR (heures légales)</div>
+          <div class="stat-value" id="frenchCallsPeakHours">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">📊 Quota atteint</div>
+          <div class="stat-value" id="frenchQuotaPercent" style="font-size:36px">0%</div>
+        </div>
+      </div>
+
+      <div style="margin:32px 0">
+        <label style="display:block;margin-bottom:12px;font-size:14px">Conformité légale (heures d'écoute significative)</label>
+        <div style="position:relative;height:60px;background:var(--surface-light);border-radius:12px;overflow:hidden;border:2px solid var(--border)">
+          <div id="quotaGauge" style="height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981);transition:width 0.6s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;color:#fff;font-weight:800;font-size:20px;min-width:60px"></div>
+          <div style="position:absolute;left:30%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.3)"></div>
+          <div style="position:absolute;left:35%;top:0;bottom:0;width:3px;background:rgba(255,255,255,0.6)"></div>
+          <div style="position:absolute;left:30%;top:-24px;font-size:11px;color:var(--text-muted)">30%</div>
+          <div style="position:absolute;left:35%;top:-24px;font-size:11px;color:var(--text-muted);font-weight:700">35% (min légal)</div>
+        </div>
+        <div id="quotaStatus" style="margin-top:16px;padding:16px;border-radius:10px;font-weight:600;text-align:center"></div>
+      </div>
+
+      <div class="card" style="background:var(--bg);margin-top:24px">
+        <div class="card-header" style="background:var(--surface)">
+          <div class="card-title">📋 Détail par catégorie</div>
+        </div>
+        <div class="card-body">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr><th>Catégorie</th><th>Titres FR</th><th>Appels FR/semaine</th><th>Appels FR (heures légales)</th><th>% de la catégorie</th></tr>
+              </thead>
+              <tbody id="frenchQuotaTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="chart-container" style="height:350px">
+          <canvas id="frenchQuotaChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="tab-content" id="tab-clock">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>🕐</span><span>Format Clock - Positions musicales par heure</span></div>
+          <button class="btn btn-secondary btn-sm" id="presetFunRadio">📻 Preset Fun Radio</button>
+        </div>
+        <div class="card-body">
+          <div class="toggle-clock" id="toggleFormatClock">
+            <div>
+              <strong>Activer le Format Clock</strong>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Limite le nombre de titres jouables par heure (animations, pubs, etc.)</div>
+            </div>
+            <input type="checkbox" id="enableFormatClock" style="width:24px;height:24px;cursor:pointer;accent-color:var(--primary)">
+          </div>
+          <div class="clock-content" id="clockContent">
+            <p style="color:var(--text-muted);margin-bottom:16px">Définis le nombre maximum de positions musicales disponibles pour chaque heure. Le simulateur répartira automatiquement tes catégories dans ces créneaux.</p>
+            <div id="clockRules"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content active" id="tab-config">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">⏱️ Heures/jour</div>
+          <input class="stat-value editable" type="number" id="hoursPerDay" min="1" max="48" value="24">
+        </div>
+        <div class="stat">
+          <div class="stat-label">📊 Total appels/jour</div>
+          <div class="stat-value" id="sumCalls">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">🎼 Titres actifs</div>
+          <div class="stat-value" id="sumTitles">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">⏲️ Intervalle moyen</div>
+          <div class="stat-value" id="globalInterval">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">🇫🇷 Quota français</div>
+          <div class="stat-value" id="homeFrenchQuota" style="font-size:32px">—</div>
+          </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>🏷️</span><span>Catégories</span></div>
+            <button class="btn btn-primary btn-sm" id="addCat">+ Ajouter</button>
+          </div>
+          <div class="card-body">
+            <div class="toolbar">
+              <button class="btn btn-secondary btn-sm" id="presetPA">📋 Preset test</button>
+            </div>
+            <div id="categoriesContainer"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>📈</span><span>Résultats & Analyse</span></div>
+            <button class="btn btn-secondary btn-sm" id="exportCSV">💾 Export CSV</button>
+          </div>
+          <div class="card-body">
+            <label class="checkbox-wrapper">
+              <input type="checkbox" id="autoRedistribute">
+              <span>Redistribuer automatiquement les déficits</span>
+            </label>
+            <div id="alertsContainer" style="margin-top:16px"></div>
+            <div style="overflow-x:auto;margin-top:20px">
+              <table id="resultsTable">
+                <thead>
+                  <tr><th>Catégorie</th><th>Titres</th><th>Appels/jour</th><th>Appels/h moy.</th><th>Passages titre/heure</th><th>Intervalle</th><th>% du total</th></tr>                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar" style="justify-content:center;margin-top:20px">
+        <button class="btn btn-secondary" id="exportJSON">💾 Exporter preset</button>
+        <button class="btn btn-primary" id="importJSON">📂 Importer preset</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-hourly">
+      <div class="card">
+        <div class="card-header"><div class="card-title">📊 Répartition des appels par heure</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="hourlyChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🎯 Distribution par catégorie</div></div>
+        <div class="card-body"><div class="chart-container" style="height:300px"><canvas id="pieChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-weekly">
+      <div class="card">
+        <div class="card-header"><div class="card-title">📅 Simulation hebdomadaire</div></div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Applique tes règles sur une semaine complète</p>
+          <div class="week-selector" id="weekSelector"></div>
+          <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+          <div style="margin-top:24px">
+            <h3 style="margin-bottom:12px">Totaux hebdomadaires</h3>
+            <div class="stats" id="weeklyStats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-heatmap">
+      <div class="card">
+        <div class="card-header"><div class="card-title">🔥 Heatmap de densité (semaine)</div></div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Intensité des appels par heure et par jour</p>
+          <div id="heatmapContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">2025 — Martial Demots • Spinclock : Simulateur de rotations musicales</div>
+  </div>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <strong>📝 Journal des modifications</strong>
+        <button class="btn btn-secondary btn-sm" id="closeModal">Fermer</button>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li><strong>V2.7.3</strong> – Amélioration libellés champs catégories ("Appels/heure" et "Titres FR"). Affichage des jours actifs sur une seule ligne (7 colonnes). Ajout colonne "% du total" dans le tableau Résultats.</li>
+          <li><strong>V2.7</strong> — Améliorations interface : réorganisation des champs catégories sur une seule ligne. Affichage du quota français sur la page d'accueil avec code couleur </li>
+          <li><strong>V2.6</strong> — Sélection multi-jours personnalisée <Module Quotas français : calcul automatique du pourcentage de titres francophones avec plages horaires légales (Lun-Ven 6h-22h30, Sam 6h30-22h30, Dim 7h-22h30). Jauge visuelle de conformité dans l'onglet dédié.</li>
+          <li><strong>V2.5</strong> — Ajout du module "Format Clock" : définis le nombre de positions musicales disponibles par heure. Preset Fun Radio inclus.</li>
+          <li><strong>V2.5</strong> — Ajout du module "Format Clock" : définis le nombre de positions musicales disponibles par heure. Preset Fun Radio inclus.</li>
+          <li><strong>V2.4</strong> — Ajout du champ "Appels/heure (simple)" et différenciation semaine/weekend.</li>
+          <li><strong>V2.3</strong> — Module "Visualisations & Analyses" avec graphiques et heatmap.</li>
+          <li><strong>V2.2</strong> — Couleurs pour toutes les lettres de l'alphabet.</li>
+          <li><strong>V2.1</strong> — Refonte design thème sombre.</li>
+          <li><strong>V2.0</strong> — Suppression slots T1-T13, nouvelle logique de quotas par plages horaires.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const q=s=>document.querySelector(s);
+      const qq=s=>Array.from(document.querySelectorAll(s));
+      
+      function pad2(n){return String(n).padStart(2,'0')}
+      function minutesToHHMM(x){if(!isFinite(x)||x<=0)return'—';const m=Math.round(x);const h=Math.floor(m/60);return h+'h'+String(m%60).padStart(2,'0')}
+      function round(x,d=2){if(!isFinite(x))return 0;const p=Math.pow(10,d);return Math.round(x*p)/p}
+      function firstLetterCode(code){return(code||'').toString().trim().charAt(0).toUpperCase()}
+      function getCategoryColor(code){const fl=firstLetterCode(code);const colorMap={'P':'#8b5cf6','A':'#ef4444','B':'#10b981','C':'#f59e0b','D':'#ec4899','E':'#6366f1','S':'#eab308','R':'#f97316','G':'#a855f7','H':'#06b6d4','I':'#84cc16','J':'#f43f5e','K':'#8b5cf6','L':'#06b6d4','M':'#10b981','N':'#f59e0b','O':'#ec4899','Q':'#6366f1','T':'#14b8a6','U':'#f97316','V':'#a855f7','W':'#84cc16','X':'#f43f5e','Y':'#8b5cf6','Z':'#06b6d4'};return colorMap[fl]||'#64748b'}
+      
+      const state={hoursPerDay:24,autoRedistribute:false,categories:[],formatClock:{enabled:false,hours:Array.from({length:24},(_,i)=>({hour:i,positions:18}))}};
+      const STORAGE_KEY='rotations-sim-v2-6';
+      
+      function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+      function load(){
+        const s=localStorage.getItem(STORAGE_KEY);
+        if(s){
+          try{
+            const obj=JSON.parse(s);
+            // Migration V2.5 → V2.6 : convertir daysType en days[]
+            if(obj.categories){
+              obj.categories.forEach(cat=>{
+                if(cat.slots){
+                  cat.slots.forEach(slot=>{
+                    if(slot.daysType&&!slot.days){
+                      if(slot.daysType==='all')slot.days=[0,1,2,3,4,5,6];
+                      else if(slot.daysType==='week')slot.days=[0,1,2,3,4];
+                      else if(slot.daysType==='weekend')slot.days=[5,6];
+                      delete slot.daysType;
+                    }
+                    if(!slot.days)slot.days=[0,1,2,3,4,5,6];
+                  });
+                }
+              });
+            }
+            Object.assign(state,obj);
+          }catch(e){}
+        }
+      }
+      
+      function renderCategories(){
+        const container=q('#categoriesContainer');
+        container.innerHTML='';
+        if(state.categories.length===0){
+          container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Aucune catégorie. Cliquez sur "+ Ajouter" ou "📋 Preset"</p>';
+          q('#sumTitles').textContent='0';
+          return;
+        }
+        state.categories.forEach((cat,catIdx)=>{
+          const catCard=document.createElement('div');
+          catCard.className='category-card';
+          const fl=firstLetterCode(cat.code);
+          const cls=fl?('cat-'+fl):'cat-neutral';
+          catCard.innerHTML=`
+            <div class="category-header">
+              <span class="pill ${cls}">${cat.code||'—'}</span>
+              <button class="btn btn-danger btn-sm" data-delete-cat="${catIdx}">🗑️ Supprimer</button>
+            </div>
+            <div class="grid grid-4" style="margin-bottom:16px">
+            <div><label>Code catégorie</label><input type="text" value="${cat.code||''}" data-cat="${catIdx}" data-field="code" placeholder="Ex: A, B, P..."></div>
+            <div><label>Nombre de titres</label><input type="number" min="0" step="1" value="${cat.titles||0}" data-cat="${catIdx}" data-field="titles"></div>
+            <div><label>Appels/heure</label><input type="number" min="0" step="1" value="${cat.simpleCallsPerHour||0}" data-cat="${catIdx}" data-field="simpleCallsPerHour" placeholder="Sur 24h"></div>
+            <div><label>Titres FR</label><input type="number" min="0" step="1" value="${cat.frenchTitles||0}" data-cat="${catIdx}" data-field="frenchTitles" placeholder="Nb FR"></div>
+            </div>
+            <div class="slot-rules-section">
+              <div class="slot-rules-toggle" data-toggle-rules="${catIdx}">
+                <label style="margin:0;cursor:pointer">▶ Règles horaires avancées</label>
+                <button class="btn btn-primary btn-sm" data-add-slot="${catIdx}" style="pointer-events:all">+ Plage</button>
+              </div>
+              <div class="slot-rules-content" data-slots-container="${catIdx}"></div>
+            </div>`;
+          container.appendChild(catCard);
+          const toggle=catCard.querySelector('[data-toggle-rules]');
+          const rulesContainer=catCard.querySelector(`[data-slots-container="${catIdx}"]`);
+          toggle.addEventListener('click',e=>{if(e.target.closest('[data-add-slot]'))return;rulesContainer.classList.toggle('open');toggle.querySelector('label').textContent=rulesContainer.classList.contains('open')?'▼ Règles horaires avancées':'▶ Règles horaires avancées'});
+          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='simpleCallsPerHour'||field==='frenchTitles')val=Number(val||0);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;state.categories[idx][field]=val;save();compute();renderCategories();renderResults()})});
+          catCard.querySelector('[data-delete-cat]').addEventListener('click',()=>{state.categories.splice(catIdx,1);save();compute();renderCategories();renderResults()});
+          catCard.querySelector('[data-add-slot]').addEventListener('click',e=>{e.stopPropagation();state.categories[catIdx].slots.push({startHour:0,endHour:23,callsPerHour:0,days:[0,1,2,3,4,5,6]});save();renderSlots(catIdx);compute();renderResults();if(!rulesContainer.classList.contains('open')){rulesContainer.classList.add('open');toggle.querySelector('label').textContent='▼ Règles horaires avancées'}});
+          renderSlots(catIdx);
+        });
+        q('#sumTitles').textContent=state.categories.reduce((a,b)=>a+(Number(b.titles)||0),0);
+      }
+      
+      function renderSlots(catIdx){
+        const container=q(`[data-slots-container="${catIdx}"]`);
+        if(!container)return;
+        const cat=state.categories[catIdx];
+        container.innerHTML='';
+        if(!cat.slots||cat.slots.length===0){container.innerHTML='<p style="color:var(--text-muted);padding:12px;text-align:center">Aucune règle. Cliquez sur "+ Plage"</p>';return}
+        cat.slots.forEach((slot,slotIdx)=>{
+          if(!slot.days)slot.days=[0,1,2,3,4,5,6];
+          const slotDiv=document.createElement('div');
+          slotDiv.className='slot-rule';
+          const dayNames=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+          slotDiv.innerHTML=`
+            <div class="slot-rule-header">
+              <span class="slot-tag">Plage ${slotIdx+1}</span>
+              <button class="btn btn-danger btn-sm" data-delete-slot="${catIdx}-${slotIdx}">✕</button>
+            </div>
+            <div class="grid grid-3" style="margin-bottom:12px">
+              <div><label>Heure début</label><input type="number" min="0" max="23" value="${slot.startHour}" data-slot="${catIdx}-${slotIdx}" data-slot-field="startHour"></div>
+              <div><label>Heure fin</label><input type="number" min="0" max="23" value="${slot.endHour}" data-slot="${catIdx}-${slotIdx}" data-slot-field="endHour"></div>
+              <div><label>Appels/heure</label><input type="number" min="0" step="1" value="${slot.callsPerHour}" data-slot="${catIdx}-${slotIdx}" data-slot-field="callsPerHour"></div>
+            </div>
+            <div>
+              <label>Jours actifs</label>
+              <div class="day-checkboxes" data-days="${catIdx}-${slotIdx}">
+                ${dayNames.map((day,dayIdx)=>`
+                  <div class="day-checkbox-item ${slot.days.includes(dayIdx)?'checked':''}" data-day-item="${dayIdx}">
+                    <input type="checkbox" id="day-${catIdx}-${slotIdx}-${dayIdx}" ${slot.days.includes(dayIdx)?'checked':''} data-day-idx="${dayIdx}">
+                    <label for="day-${catIdx}-${slotIdx}-${dayIdx}">${day}</label>
+                  </div>
+                `).join('')}
+              </div>
+            </div>`;
+          container.appendChild(slotDiv);
+          slotDiv.querySelectorAll('input[data-slot-field]').forEach(inp=>{
+            const updateSlot=()=>{
+              const[cIdx,sIdx]=inp.dataset.slot.split('-').map(Number);
+              const field=inp.dataset.slotField;
+              const val=Number(inp.value||0);
+              state.categories[cIdx].slots[sIdx][field]=val;
+              save();compute();renderResults();
+            };
+            inp.addEventListener('input',updateSlot);
+            inp.addEventListener('change',updateSlot);
+          });
+          // Day checkboxes
+          const daysContainer=slotDiv.querySelector(`[data-days="${catIdx}-${slotIdx}"]`);
+          daysContainer.querySelectorAll('.day-checkbox-item').forEach(item=>{
+            const checkbox=item.querySelector('input[type="checkbox"]');
+            const dayIdx=Number(checkbox.dataset.dayIdx);
+            item.addEventListener('click',e=>{
+              if(e.target.tagName==='INPUT')return;
+              checkbox.checked=!checkbox.checked;
+              item.classList.toggle('checked',checkbox.checked);
+              if(checkbox.checked){
+                if(!slot.days.includes(dayIdx))slot.days.push(dayIdx);
+              }else{
+                slot.days=slot.days.filter(d=>d!==dayIdx);
+              }
+              slot.days.sort((a,b)=>a-b);
+              save();compute();renderResults();
+            });
+            checkbox.addEventListener('change',()=>{
+              item.classList.toggle('checked',checkbox.checked);
+              if(checkbox.checked){
+                if(!slot.days.includes(dayIdx))slot.days.push(dayIdx);
+              }else{
+                slot.days=slot.days.filter(d=>d!==dayIdx);
+              }
+              slot.days.sort((a,b)=>a-b);
+              save();compute();renderResults();
+            });
+          });
+          slotDiv.querySelector('[data-delete-slot]').addEventListener('click',()=>{cat.slots.splice(slotIdx,1);save();renderSlots(catIdx);compute();renderResults()});
+        });
+      }
+      
+      let computed={perCat:[],sumCalls:0,globalInterval:'—',alerts:[],hourlyData:[],frenchQuotas:{totalFrenchTitles:0,totalFrenchCalls:0,frenchCallsPeakHours:0,totalCallsPeakHours:0,percentPeakHours:0,perCat:[]}};
+      
+      function compute(){
+        const hours=Number(q('#hoursPerDay').value||24);
+        state.hoursPerDay=hours;
+        const alerts=[];
+        const hourlyData=[];
+        for(let h=0;h<hours;h++){
+          const hourData={hour:h,categories:{},maxPositions:state.formatClock.hours[h]?.positions||18};
+          let totalUsed=0;
+          state.categories.forEach(cat=>{
+            let callsThisHour=0;
+            if(cat.slots&&cat.slots.length>0){
+              for(const slot of cat.slots){if(h>=slot.startHour&&h<=slot.endHour){callsThisHour=slot.callsPerHour;break}}
+            }else{callsThisHour=Number(cat.simpleCallsPerHour||0)}
+            hourData.categories[cat.code||'Sans code']=callsThisHour;
+            totalUsed+=callsThisHour;
+          });
+          hourData.totalUsed=totalUsed;
+          hourlyData.push(hourData);
+        }
+        const perCat=state.categories.map(cat=>{
+          let totalCallsPerDay=0;
+          if(cat.slots&&cat.slots.length>0){
+            for(let h=0;h<hours;h++){
+              let callsThisHour=0;
+              for(const slot of cat.slots){if(h>=slot.startHour&&h<=slot.endHour){callsThisHour=slot.callsPerHour;break}}
+              if(state.formatClock.enabled){const maxPositions=state.formatClock.hours[h]?.positions||18;callsThisHour=Math.min(callsThisHour,maxPositions)}
+              totalCallsPerDay+=callsThisHour;
+            }
+          }else{
+            const simpleCallsPerHour=Number(cat.simpleCallsPerHour||0);
+            for(let h=0;h<hours;h++){
+              let callsThisHour=simpleCallsPerHour;
+              if(state.formatClock.enabled){const maxPositions=state.formatClock.hours[h]?.positions||18;callsThisHour=Math.min(callsThisHour,maxPositions)}
+              totalCallsPerDay+=callsThisHour;
+            }
+          }
+          const maxPossibleCalls=cat.titles*hours;
+          if(totalCallsPerDay>maxPossibleCalls&&cat.titles>0){
+            const deficit=totalCallsPerDay-maxPossibleCalls;
+            alerts.push({cat:cat.code||'Sans code',message:`Quota impossible : ${round(totalCallsPerDay,1)} appels demandés mais seulement ${maxPossibleCalls} possibles (${cat.titles} titres × ${hours}h). Déficit : ${round(deficit,1)} appels.`});
+            if(state.autoRedistribute){totalCallsPerDay=maxPossibleCalls}
+          }
+          const callsPerHourAvg=hours>0?totalCallsPerDay/hours:0;
+          const passesPerTitlePerDay=cat.titles>0?totalCallsPerDay/cat.titles:0;
+          const intervalMin=passesPerTitlePerDay>0?(60*24)/passesPerTitlePerDay:0;
+          return{code:cat.code,titles:cat.titles,totalCallsPerDay,callsPerHourAvg,passesPerTitlePerDay,intervalMin};
+        });
+        const sumCalls=perCat.reduce((a,b)=>a+b.totalCallsPerDay,0);
+        const intervals=perCat.filter(r=>r.passesPerTitlePerDay>0).map(r=>r.intervalMin);
+        const globalInterval=intervals.length?minutesToHHMM(intervals.reduce((a,b)=>a+b,0)/intervals.length):'—';
+
+        // Calcul quotas français
+        const frenchQuotas={totalFrenchTitles:0,totalFrenchCalls:0,frenchCallsPeakHours:0,totalCallsPeakHours:0,percentPeakHours:0,perCat:[]};
+        state.categories.forEach(cat=>{
+        frenchQuotas.totalFrenchTitles+=(cat.frenchTitles||0);
+        let catFrenchCallsTotal=0;
+        let catFrenchCallsPeak=0;
+        let catTotalCallsPeak=0;
+        const frenchRatio=(cat.titles>0&&cat.frenchTitles>0)?(cat.frenchTitles/cat.titles):0;
+  
+        // Calcul sur 7 jours de la semaine
+        for(let day=0;day<7;day++){
+        // Définir les heures de début et fin selon le jour
+            let startHour,endHour;
+            if(day>=0&&day<=4){startHour=6;endHour=22.5} // Lun-Ven: 6h00-22h30
+            else if(day===5){startHour=6.5;endHour=22.5} // Sam: 6h30-22h30
+            else{startHour=7;endHour=22.5} // Dim: 7h00-22h30
+            
+            for(let h=0;h<hours;h++){
+            let callsThisHour=0;
+            if(cat.slots&&cat.slots.length>0){
+                for(const slot of cat.slots){
+                if(h>=slot.startHour&&h<=slot.endHour){
+                    const days=slot.days||[0,1,2,3,4,5,6];
+                    if(days.includes(day)){callsThisHour=slot.callsPerHour;break}
+                }
+                }
+            }else{callsThisHour=Number(cat.simpleCallsPerHour||0)}
+            if(state.formatClock.enabled){const maxPositions=state.formatClock.hours[h]?.positions||18;callsThisHour=Math.min(callsThisHour,maxPositions)}
+            const frenchCallsThisHour=callsThisHour*frenchRatio;
+            catFrenchCallsTotal+=frenchCallsThisHour;
+            
+            // Vérifier si l'heure est dans la plage légale pour ce jour
+            const isPeakHour=(h>=Math.floor(startHour)&&h<Math.ceil(endHour));
+            if(isPeakHour){
+                catFrenchCallsPeak+=frenchCallsThisHour;
+                catTotalCallsPeak+=callsThisHour;
+            }
+            }
+        }
+        
+        frenchQuotas.totalFrenchCalls+=catFrenchCallsTotal;
+        frenchQuotas.frenchCallsPeakHours+=catFrenchCallsPeak;
+        frenchQuotas.totalCallsPeakHours+=catTotalCallsPeak;
+        frenchQuotas.perCat.push({code:cat.code,frenchTitles:cat.frenchTitles||0,totalTitles:cat.titles||0,frenchCallsTotal:catFrenchCallsTotal,frenchCallsPeak:catFrenchCallsPeak,percentOfCategory:cat.titles>0?((cat.frenchTitles||0)/cat.titles*100):0});
+        });
+        frenchQuotas.percentPeakHours=frenchQuotas.totalCallsPeakHours>0?(frenchQuotas.frenchCallsPeakHours/frenchQuotas.totalCallsPeakHours*100):0;
+
+        computed={perCat,sumCalls,globalInterval,alerts,hourlyData,frenchQuotas};
+      }
+      function renderResults(){
+  q('#sumCalls').textContent=round(computed.sumCalls,2);
+  q('#globalInterval').textContent=computed.globalInterval;
+  
+  // Affichage du quota français sur la home
+  const quotaPercent=computed.frenchQuotas?.percentPeakHours || 0;
+  const homeQuota=q('#homeFrenchQuota');
+  if(homeQuota){
+    if(quotaPercent>0){
+      homeQuota.textContent=round(quotaPercent,1)+'%';
+      if(quotaPercent<30){homeQuota.style.color='#ef4444'}
+      else if(quotaPercent<35){homeQuota.style.color='#f59e0b'}
+      else{homeQuota.style.color='#10b981'}
+    }else{
+      homeQuota.textContent='—';
+      homeQuota.style.color='var(--text)';
+    }
+  }
+  
+  const alertsContainer=q('#alertsContainer');
+  if(computed.alerts.length>0){
+    alertsContainer.innerHTML=`<div class="alert"><div class="alert-title">⚠️ Alertes de configuration</div><ul class="alert-list">${computed.alerts.map(a=>`<li><strong>${a.cat}</strong> : ${a.message}</li>`).join('')}</ul></div>`;
+  }else{alertsContainer.innerHTML=''}
+  const tbody=q('#resultsTable tbody');
+  tbody.innerHTML='';
+  computed.perCat.forEach(r=>{
+    const tr=document.createElement('tr');
+    const fl=firstLetterCode(r.code);
+    const cls=fl?('cat-'+fl):'cat-neutral';
+    const label=r.code?r.code:'—';
+    const percent=computed.sumCalls>0?(r.totalCallsPerDay/computed.sumCalls*100):0;
+    tr.innerHTML=`<td><span class="pill ${cls}">${label}</span></td><td>${r.titles||0}</td><td>${round(r.totalCallsPerDay,2)}</td><td>${round(r.callsPerHourAvg,2)}</td><td>${round(r.passesPerTitlePerDay,2)}</td><td>${minutesToHHMM(r.intervalMin)}</td><td>${round(percent,1)}%</td>`;    tbody.appendChild(tr);
+  });
+}
+      
+      function renderFormatClock(){
+        const checkbox=q('#enableFormatClock');
+        const content=q('#clockContent');
+        const toggle=q('#toggleFormatClock');
+        checkbox.checked=state.formatClock.enabled;
+        if(state.formatClock.enabled){content.classList.add('open');toggle.classList.add('active')}else{content.classList.remove('open');toggle.classList.remove('active')}
+        const container=q('#clockRules');
+        container.innerHTML='';
+        state.formatClock.hours.forEach((hourData,idx)=>{
+          const row=document.createElement('div');
+          row.className='clock-row';
+          row.innerHTML=`<div class="clock-label">${pad2(hourData.hour)}h - ${pad2((hourData.hour+1)%24)}h</div><div class="positions-badge">${hourData.positions} positions</div><input type="range" min="0" max="20" value="${hourData.positions}" data-hour="${idx}" class="range-slider" style="width:100%;accent-color:var(--primary)"><input type="number" min="0" max="20" value="${hourData.positions}" data-hour-input="${idx}" style="width:80px;padding:8px;text-align:center">`;
+          container.appendChild(row);
+          const slider=row.querySelector('.range-slider');
+          const input=row.querySelector('input[type="number"]');
+          const badge=row.querySelector('.positions-badge');
+          slider.addEventListener('input',()=>{const val=Number(slider.value);state.formatClock.hours[idx].positions=val;badge.textContent=`${val} positions`;input.value=val;save();compute();renderResults()});
+          input.addEventListener('input',()=>{const val=Math.min(20,Math.max(0,Number(input.value)||0));state.formatClock.hours[idx].positions=val;badge.textContent=`${val} positions`;slider.value=val;save();compute();renderResults()});
+        });
+      }
+      
+      let hourlyChart,pieChart,weeklyChart,frenchQuotaChart;
+        function renderFrenchQuotas(){
+        q('#totalFrenchTitles').textContent=computed.frenchQuotas.totalFrenchTitles;
+        q('#totalFrenchCalls').textContent=round(computed.frenchQuotas.totalFrenchCalls,1);
+        q('#frenchCallsPeakHours').textContent=round(computed.frenchQuotas.frenchCallsPeakHours,1);
+        const percent=computed.frenchQuotas.percentPeakHours;
+        q('#frenchQuotaPercent').textContent=round(percent,1)+'%';
+        const gauge=q('#quotaGauge');
+        gauge.style.width=Math.min(100,percent)+'%';
+        gauge.textContent=round(percent,1)+'%';
+        const status=q('#quotaStatus');
+        if(percent<30){status.style.background='linear-gradient(135deg,rgba(239,68,68,0.2),rgba(220,38,38,0.1))';status.style.border='1px solid rgba(239,68,68,0.3)';status.style.color='#fca5a5';status.innerHTML='❌ <strong>Non conforme</strong> — En dessous du minimum légal (35%)'}
+        else if(percent<35){status.style.background='linear-gradient(135deg,rgba(245,158,11,0.2),rgba(217,119,6,0.1))';status.style.border='1px solid rgba(245,158,11,0.3)';status.style.color='#fcd34d';status.innerHTML='⚠️ <strong>Attention</strong> — Proche du minimum légal (35%)'}
+        else{status.style.background='linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1))';status.style.border='1px solid rgba(16,185,129,0.3)';status.style.color='#6ee7b7';status.innerHTML='✅ <strong>Conforme</strong> — Quota légal respecté (≥35%)'}
+        const tbody=q('#frenchQuotaTable');
+        tbody.innerHTML='';
+        computed.frenchQuotas.perCat.forEach(r=>{
+            const fl=firstLetterCode(r.code);
+            const cls=fl?('cat-'+fl):'cat-neutral';
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td><span class="pill ${cls}">${r.code||'—'}</span></td><td>${r.frenchTitles}/${r.totalTitles}</td><td>${round(r.frenchCallsTotal,1)}</td><td>${round(r.frenchCallsPeak,1)}</td><td>${round(r.percentOfCategory,1)}%</td>`;
+            tbody.appendChild(tr);
+        });
+        const ctx=q('#frenchQuotaChart');
+        if(!ctx)return;
+        if(frenchQuotaChart)frenchQuotaChart.destroy();
+        const labels=Array.from({length:24},(_,i)=>`${pad2(i)}h`);
+        const frenchData=[];
+        const totalData=[];
+        for(let h=0;h<24;h++){
+            let totalFrench=0;
+            let totalAll=0;
+            state.categories.forEach(cat=>{
+            let callsThisHour=0;
+            if(cat.slots&&cat.slots.length>0){
+                for(const slot of cat.slots){if(h>=slot.startHour&&h<=slot.endHour){callsThisHour=slot.callsPerHour;break}}
+            }else{callsThisHour=Number(cat.simpleCallsPerHour||0)}
+            if(state.formatClock.enabled){const maxPositions=state.formatClock.hours[h]?.positions||18;callsThisHour=Math.min(callsThisHour,maxPositions)}
+            const frenchRatio=(cat.titles>0&&cat.frenchTitles>0)?(cat.frenchTitles/cat.titles):0;
+            totalFrench+=callsThisHour*frenchRatio;
+            totalAll+=callsThisHour;
+            });
+            frenchData.push(totalFrench);
+            totalData.push(totalAll);
+        }
+        frenchQuotaChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Titres français',data:frenchData,backgroundColor:'#3b82f6',borderColor:'#2563eb',borderWidth:2},{label:'Titres internationaux',data:totalData.map((t,i)=>t-frenchData[i]),backgroundColor:'#64748b',borderColor:'#475569',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Répartition français/international par heure',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}}}}});
+        }
+      function renderHourlyChart(){
+        const ctx=q('#hourlyChart');
+        if(!ctx)return;
+        if(hourlyChart)hourlyChart.destroy();
+        const labels=Array.from({length:state.hoursPerDay},(_,i)=>`${pad2(i)}h`);
+        const datasets=state.categories.map(cat=>({label:cat.code||'Sans code',data:computed.hourlyData.map(h=>h.categories[cat.code||'Sans code']||0),backgroundColor:getCategoryColor(cat.code),borderColor:getCategoryColor(cat.code),borderWidth:1}));
+        if(state.formatClock.enabled){datasets.push({label:'Limite Clock',data:computed.hourlyData.map(h=>h.maxPositions),type:'line',borderColor:'#ef4444',borderWidth:3,borderDash:[5,5],fill:false,pointRadius:0,tension:0})}
+        hourlyChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Appels par heure et par catégorie'+(state.formatClock.enabled?' (avec Format Clock)':''),color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}}}}});
+        const pieCtx=q('#pieChart');
+        if(pieChart)pieChart.destroy();
+        const pieData=computed.perCat.map(r=>r.totalCallsPerDay);
+        const pieLabels=computed.perCat.map(r=>r.code||'Sans code');
+        const pieColors=computed.perCat.map(r=>getCategoryColor(r.code));
+        pieChart=new Chart(pieCtx,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors,borderWidth:2,borderColor:'#1e293b'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Distribution des appels par catégorie',color:'#f1f5f9',font:{size:16,weight:'bold'}}}}});
+      }
+      
+      function renderWeeklyChart(){
+        const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        const weekSelector=q('#weekSelector');
+        weekSelector.innerHTML=days.map((day,i)=>`<button class="day-btn active" data-day="${i}">${day}</button>`).join('');
+        weekSelector.querySelectorAll('.day-btn').forEach(btn=>{btn.addEventListener('click',()=>{btn.classList.toggle('active');renderWeeklyChart()})});
+        const activeDays=Array.from(weekSelector.querySelectorAll('.day-btn.active')).map(b=>Number(b.dataset.day));
+        const ctx=q('#weeklyChart');
+        if(!ctx)return;
+        if(weeklyChart)weeklyChart.destroy();
+        const datasets=state.categories.map(cat=>{
+          const data=days.map((_,dayIdx)=>{
+            if(!activeDays.includes(dayIdx))return 0;
+            const isWeekend=dayIdx>=5;
+            let totalForDay=0;
+            if(cat.slots&&cat.slots.length>0){
+              for(let h=0;h<state.hoursPerDay;h++){
+                let callsThisHour=0;
+                for(const slot of cat.slots){
+                  if(h>=slot.startHour&&h<=slot.endHour){
+                    const days=slot.days||[0,1,2,3,4,5,6];
+                    const isWeekend=dayIdx>=5;
+                    if(days.includes(dayIdx)){callsThisHour=slot.callsPerHour;break}
+                  }
+                }
+                totalForDay+=callsThisHour;
+              }
+            }else{totalForDay=Number(cat.simpleCallsPerHour||0)*state.hoursPerDay}
+            return totalForDay;
+          });
+          return{label:cat.code||'Sans code',data:data,backgroundColor:getCategoryColor(cat.code),borderColor:getCategoryColor(cat.code),borderWidth:2};
+        });
+        weeklyChart=new Chart(ctx,{type:'bar',data:{labels:days,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Simulation hebdomadaire',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}}}}});
+        const weeklyStats=q('#weeklyStats');
+        let totalWeekCalls=0;
+        activeDays.forEach(dayIdx=>{
+          const isWeekend=dayIdx>=5;
+          state.categories.forEach(cat=>{
+            if(cat.slots&&cat.slots.length>0){
+              for(let h=0;h<state.hoursPerDay;h++){
+                for(const slot of cat.slots){
+                  if(h>=slot.startHour&&h<=slot.endHour){
+                    const days=slot.days||[0,1,2,3,4,5,6];
+                    if(days.includes(dayIdx)){totalWeekCalls+=slot.callsPerHour;break}
+                  }
+                }
+              }
+            }else{totalWeekCalls+=Number(cat.simpleCallsPerHour||0)*state.hoursPerDay}
+          });
+        });
+        weeklyStats.innerHTML=`<div class="stat"><div class="stat-label">📅 Jours actifs</div><div class="stat-value">${activeDays.length}</div></div><div class="stat"><div class="stat-label">📊 Total appels/semaine</div><div class="stat-value">${round(totalWeekCalls,0)}</div></div><div class="stat"><div class="stat-label">📈 Moyenne/jour</div><div class="stat-value">${activeDays.length>0?round(totalWeekCalls/activeDays.length,0):0}</div></div>`;
+      }
+      
+      function renderHeatmap(){
+        const container=q('#heatmapContainer');
+        if(!container)return;
+        const days=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+        let maxCalls=0;
+        days.forEach((_,dayIdx)=>{
+          const isWeekend=dayIdx>=5;
+          for(let h=0;h<24;h++){
+            let total=0;
+            state.categories.forEach(cat=>{
+              if(cat.slots&&cat.slots.length>0){
+                for(const slot of cat.slots){
+                  if(h>=slot.startHour&&h<=slot.endHour){
+                    const days=slot.days||[0,1,2,3,4,5,6];
+                    if(days.includes(dayIdx)){total+=slot.callsPerHour;break}
+                  }
+                }
+              }else{total+=Number(cat.simpleCallsPerHour||0)}
+            });
+            if(total>maxCalls)maxCalls=total;
+          }
+        });
+        container.innerHTML='';
+        const header=document.createElement('div');
+        header.className='heatmap-header';
+        header.innerHTML='<div class="heatmap-label"></div>'+Array.from({length:24},(_,i)=>`<div class="heatmap-label">${i}</div>`).join('');
+        container.appendChild(header);
+        days.forEach((day,dayIdx)=>{
+          const isWeekend=dayIdx>=5;
+          const row=document.createElement('div');
+          row.className='heatmap';
+          row.innerHTML=`<div class="heatmap-label">${day}</div>`;
+          for(let h=0;h<24;h++){
+            let total=0;
+            state.categories.forEach(cat=>{
+              if(cat.slots&&cat.slots.length>0){
+                for(const slot of cat.slots){
+                  if(h>=slot.startHour&&h<=slot.endHour){
+                    const daysType=slot.daysType||'all';
+                    if(daysType==='all'||(daysType==='week'&&!isWeekend)||(daysType==='weekend'&&isWeekend)){total+=slot.callsPerHour;break}
+                  }
+                }
+              }else{total+=Number(cat.simpleCallsPerHour||0)}
+            });
+            const intensity=maxCalls>0?total/maxCalls:0;
+            const hue=200-(intensity*80);
+            const sat=70+(intensity*30);
+            const light=50-(intensity*20);
+            const color=`hsl(${hue},${sat}%,${light}%)`;
+            const cell=document.createElement('div');
+            cell.className='heatmap-cell';
+            cell.style.background=color;
+            cell.style.color=intensity>0.5?'#fff':'#94a3b8';
+            cell.textContent=total>0?round(total,0):'';
+            cell.title=`${day} ${pad2(h)}h : ${round(total,1)} appels`;
+            row.appendChild(cell);
+          }
+          container.appendChild(row);
+        });
+      }
+      
+      qq('.tab').forEach(tab=>{tab.addEventListener('click',()=>{qq('.tab').forEach(t=>t.classList.remove('active'));qq('.tab-content').forEach(tc=>tc.classList.remove('active'));tab.classList.add('active');q(`#tab-${tab.dataset.tab}`).classList.add('active');const tabId=tab.dataset.tab;if(tabId==='clock')renderFormatClock();if(tabId==='quotas')renderFrenchQuotas();if(tabId==='hourly')renderHourlyChart();if(tabId==='weekly')renderWeeklyChart();if(tabId==='heatmap')renderHeatmap()})});
+      
+      q('#addCat').addEventListener('click',()=>{state.categories.push({code:'',titles:0,frenchTitles:0,simpleCallsPerHour:0,slots:[]});save();renderCategories();compute();renderResults()});
+      q('#presetPA').addEventListener('click',()=>{state.categories=[{code:'A',titles:5,frenchTitles:1,simpleCallsPerHour:4,slots:[]},{code:'B',titles:10,frenchTitles:4,simpleCallsPerHour:3,slots:[]},{code:'C',titles:8,frenchTitles:4,simpleCallsPerHour:2,slots:[]},{code:'S1',titles:5,frenchTitles:2,simpleCallsPerHour:1.5,slots:[]},{code:'S2',titles:6,frenchTitles:2,simpleCallsPerHour:1,slots:[]},{code:'N',titles:7,frenchTitles:0,simpleCallsPerHour:0,slots:[{startHour:1,endHour:6,callsPerHour:2,days:[0,1,2,3,4,5,6]}]},{code:'R',titles:64,frenchTitles:0,simpleCallsPerHour:2,slots:[]},{code:'G',titles:190,frenchTitles:0,simpleCallsPerHour:2,slots:[]}];save();renderCategories();compute();renderResults()});
+      q('#version').addEventListener('click',()=>q('#modal').setAttribute('aria-hidden','false'));
+      q('#closeModal').addEventListener('click',()=>q('#modal').setAttribute('aria-hidden','true'));
+      q('#modal').addEventListener('click',e=>{if(e.target.id==='modal')q('#modal').setAttribute('aria-hidden','true')});
+      q('#enableFormatClock').addEventListener('change',()=>{state.formatClock.enabled=q('#enableFormatClock').checked;save();renderFormatClock();compute();renderResults()});
+      q('#toggleFormatClock').addEventListener('click',e=>{if(e.target.type==='checkbox')return;q('#enableFormatClock').checked=!q('#enableFormatClock').checked;state.formatClock.enabled=q('#enableFormatClock').checked;save();renderFormatClock();compute();renderResults()});
+      q('#presetFunRadio').addEventListener('click',()=>{state.formatClock.enabled=true;state.formatClock.hours.forEach((h,i)=>{if(i>=0&&i<5)h.positions=18;else if(i===5)h.positions=13;else if(i>=6&&i<10)h.positions=6;else if(i>=10&&i<12)h.positions=8;else if(i>=12&&i<15)h.positions=16;else if(i>=15&&i<18)h.positions=4;else if(i>=18&&i<21)h.positions=8;else h.positions=18});save();renderFormatClock();compute();renderResults()});
+      q('#hoursPerDay').addEventListener('input',()=>{state.hoursPerDay=Number(q('#hoursPerDay').value||24);save();compute();renderResults()});
+      q('#autoRedistribute').addEventListener('change',()=>{state.autoRedistribute=q('#autoRedistribute').checked;save();compute();renderResults()});
+      q('#exportCSV').addEventListener('click',()=>{const headers=['Code','Nb titres','Total appels/jour','Appels/heure (moy.)','Passages titre/jour','Intervalle moyen'];const rows=computed.perCat.map(r=>[r.code||'—',r.titles||0,round(r.totalCallsPerDay,2),round(r.callsPerHourAvg,2),round(r.passesPerTitlePerDay,2),minutesToHHMM(r.intervalMin)]);const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='resultats-rotations.csv';a.click();URL.revokeObjectURL(url)});
+      q('#exportJSON').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='preset-rotations.json';a.click();URL.revokeObjectURL(url)});
+      q('#importJSON').addEventListener('click',()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{const f=inp.files[0];const rd=new FileReader();rd.onload=()=>{try{Object.assign(state,JSON.parse(rd.result));save();renderCategories();compute();renderResults()}catch(e){alert('❌ Fichier invalide')}};rd.readAsText(f)};inp.click()});
+      
+      load();
+      q('#autoRedistribute').checked=state.autoRedistribute;
+      renderCategories();
+      renderFormatClock();
+      compute();
+      renderResults();
+    });
+  </script>
+</body>
+</html>

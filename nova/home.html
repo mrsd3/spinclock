@@ -8,6 +8,11 @@ THÈME RADIO NOVA : Violet, noir, blanc + logo Nova + typo machine à écrire
 -->
 <!DOCTYPE html>
 <html lang="fr">
+<script>
+  if (localStorage.getItem('nova_auth') !== '1' && sessionStorage.getItem('nova_auth') !== '1') {
+    window.location.replace('/nova/login.html');
+  }
+</script>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -181,9 +186,9 @@ THÈME RADIO NOVA : Violet, noir, blanc + logo Nova + typo machine à écrire
   <div class="container" id="mainContent">
     <div class="header">
       <div class="header-content">
-        <h1>Spinclock</h1>
+        <h1>Spinclock : Simulateur de rotations musicales</h1>
         <div class="version" id="version">V3.0.3</div>
-        <p class="subtitle">Simulateur de rotations musicales</p>
+        <p class="subtitle">Planifie, visualise et analyse les rotations musicales avec horloges programmées</p>
       </div>
     </div>
 
@@ -438,7 +443,7 @@ THÈME RADIO NOVA : Violet, noir, blanc + logo Nova + typo machine à écrire
       </div>
       <div class="modal-body">
         <ul>
-          <li><strong>V3.0.3n</strong> — Radio Nova Edition : Thème violet/noir/blanc, logo Nova, typo machine à écrire pour textes descriptifs, style épuré.</li>
+          <li><strong>V3.0.3</strong> — Radio Nova Edition : Thème violet/noir/blanc, logo Nova, typo machine à écrire pour textes descriptifs, style épuré.</li>
           <li><strong>V3.0.3</strong> — Affectation rapide d'horloges (toute la grille ou par jour), correction du bug de scroll lors de la saisie, actualisation des quotas lors du changement de régime, réduction de la hauteur des cartes de régimes.</li>
           <li><strong>V3.0.2</strong> — Onglet renommé en "Horloge", compteur de titres par horloge, système d'accordion pour réduire/étendre les horloges.</li>
           <li><strong>V3.0.1</strong> — Corrections : calculs fonctionnels sans horloges assignées, modal d'affectation corrigé, presets complets, régimes de quotas en grille, suppression du mot de passe.</li>

@@ -218,6 +218,7 @@
             <div class="toolbar">
               <button class="btn btn-secondary btn-sm" id="presetCHR">🔥 Preset CHR</button>
               <button class="btn btn-secondary btn-sm" id="presetLocale">📻 Preset Locale</button>
+              <button class="btn btn-primary btn-sm" id="importCSV">📥 Importer CSV</button>
             </div>
             <div id="categoriesContainer"></div>
           </div>
@@ -390,15 +391,27 @@
     <!-- TAB: Vue hebdomadaire -->
     <div class="tab-content" id="tab-weekly">
       <div class="card">
-        <div class="card-header"><div class="card-title">📅 Simulation hebdomadaire</div></div>
+        <div class="card-header"><div class="card-title">📅 Simulation multi-semaines</div></div>
         <div class="card-body">
-          <p style="color:var(--text-muted);margin-bottom:16px">Applique tes règles sur une semaine complète</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+            <p style="color:var(--text-muted)">Simulez vos rotations sur plusieurs semaines pour détecter les répétitions</p>
+            <div style="display:flex;align-items:center;gap:8px">
+              <label style="margin:0;color:var(--text-muted)">Nombre de semaines :</label>
+              <select id="weekCount" style="width:80px;padding:6px">
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+          </div>
           <div class="week-selector" id="weekSelector"></div>
           <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
           <div style="margin-top:24px">
-            <h3 style="margin-bottom:12px">Totaux hebdomadaires</h3>
+            <h3 style="margin-bottom:12px">Statistiques sur la période</h3>
             <div class="stats" id="weeklyStats"></div>
           </div>
+          <div style="margin-top:24px" id="multiWeekAnalysis"></div>
         </div>
       </div>
     </div>
@@ -546,10 +559,10 @@
               <div><label>Code catégorie</label><input type="text" value="${cat.code||''}" data-cat="${catIdx}" data-field="code" placeholder="Ex: A, B, P..."></div>
               <div><label>Nombre de titres</label><input type="number" min="0" step="1" value="${cat.titles||0}" data-cat="${catIdx}" data-field="titles"></div>
               <div><label>Titres FR</label><input type="number" min="0" step="1" value="${cat.frenchTitles||0}" data-cat="${catIdx}" data-field="frenchTitles" placeholder="Nb FR"></div>
-              <div><label>Couleur</label><div class="pill ${cls}" style="width:100%;cursor:default">${cat.code||'—'}</div></div>
+              <div><label>Séparation min. (heures)</label><input type="number" min="0" step="0.5" value="${cat.minSeparation||0}" data-cat="${catIdx}" data-field="minSeparation" placeholder="Ex: 2.5"></div>
             </div>`;
           container.appendChild(catCard);
-          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='frenchTitles')val=Number(val||0);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;state.categories[idx][field]=val;save();compute();if(field==='code'){renderCategories();renderClocks();}renderResults()})});
+          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='frenchTitles'||field==='minSeparation')val=Number(val||0);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;state.categories[idx][field]=val;save();compute();if(field==='code'){renderCategories();renderClocks();}renderResults()})});
           catCard.querySelector('[data-delete-cat]').addEventListener('click',()=>{state.categories.splice(catIdx,1);save();compute();renderCategories(false);renderResults();renderClocks()});
         });
         q('#sumTitles').textContent=state.categories.reduce((a,b)=>a+(Number(b.titles)||0),0);
@@ -591,6 +604,7 @@
                 <button class="clock-toggle" data-toggle-clock="${idx}">${clock.collapsed?'▶ Afficher':'▼ Réduire'}</button>
               </div>
               <div class="clock-card-header-right">
+                <button class="btn btn-secondary btn-sm" data-duplicate-clock="${idx}">📋 Dupliquer</button>
                 <button class="btn btn-danger btn-sm" data-delete-clock="${idx}">🗑️ Supprimer</button>
               </div>
             </div>
@@ -624,6 +638,19 @@
             save();
           });
           
+          clockCard.querySelector('[data-duplicate-clock]').addEventListener('click',()=>{
+            const originalClock=state.clocks[idx];
+            const duplicatedClock={
+              id:generateId(),
+              name:(originalClock.name||'Horloge')+' (copie)',
+              sequence:[...originalClock.sequence],
+              collapsed:false
+            };
+            state.clocks.push(duplicatedClock);
+            save();
+            renderClocks();
+          });
+
           clockCard.querySelector('[data-delete-clock]').addEventListener('click',()=>{
             state.clocks.splice(idx,1);
             save();
@@ -986,7 +1013,16 @@
           const callsPerHourAvg=hours>0?totalCallsPerDay/hours:0;
           const passesPerTitlePerDay=cat.titles>0?totalCallsPerDay/cat.titles:0;
           const intervalMin=passesPerTitlePerDay>0?(60*24)/passesPerTitlePerDay:0;
-          return{code:cat.code,titles:cat.titles,totalCallsPerDay,callsPerHourAvg,passesPerTitlePerDay,intervalMin};
+          const intervalHours=intervalMin/60;
+
+          // Vérifier les règles de séparation
+          const minSeparation=cat.minSeparation||0;
+          if(minSeparation>0&&intervalHours>0&&intervalHours<minSeparation){
+            const diff=minSeparation-intervalHours;
+            alerts.push({cat:cat.code||'Sans code',message:`⚠️ Règle de séparation non respectée : intervalle réel ${minutesToHHMM(intervalMin)} (${round(intervalHours,2)}h) < minimum requis ${round(minSeparation,2)}h. Écart : ${round(diff,2)}h. Réduisez les appels ou augmentez le nombre de titres.`});
+          }
+
+          return{code:cat.code,titles:cat.titles,totalCallsPerDay,callsPerHourAvg,passesPerTitlePerDay,intervalMin,minSeparation};
         });
         
         const sumCalls=perCat.reduce((a,b)=>a+b.totalCallsPerDay,0);
@@ -1192,11 +1228,14 @@
       
       function renderWeeklyChart(){
         const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        const weekCountSelect=q('#weekCount');
+        const weekCount=weekCountSelect?parseInt(weekCountSelect.value):1;
+
         const weekSelector=q('#weekSelector');
         weekSelector.innerHTML=days.map((day,i)=>`<button class="day-btn active" data-day="${i}">${day}</button>`).join('');
         weekSelector.querySelectorAll('.day-btn').forEach(btn=>{btn.addEventListener('click',()=>{btn.classList.toggle('active');renderWeeklyChart()})});
         const activeDays=Array.from(weekSelector.querySelectorAll('.day-btn.active')).map(b=>Number(b.dataset.day));
-        
+
         const ctx=q('#weeklyChart');
         if(!ctx)return;
         if(weeklyChart)weeklyChart.destroy();
@@ -1221,9 +1260,9 @@
           });
           return{label:cat.code||'Sans code',data:data,backgroundColor:getCategoryColor(cat.code),borderColor:getCategoryColor(cat.code),borderWidth:2};
         });
-        weeklyChart=new Chart(ctx,{type:'bar',data:{labels:days,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Simulation hebdomadaire',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}}}}});
-        
-        const weeklyStats=q('#weeklyStats');
+        weeklyChart=new Chart(ctx,{type:'bar',data:{labels:days,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Répartition hebdomadaire (Semaine type)',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'#475569'},ticks:{color:'#94a3b8'}}}}});
+
+        // Calcul des stats sur la période
         let totalWeekCalls=0;
         activeDays.forEach(dayIdx=>{
           for(let h=0;h<state.hoursPerDay;h++){
@@ -1236,7 +1275,78 @@
             }
           }
         });
-        weeklyStats.innerHTML=`<div class="stat"><div class="stat-label">📅 Jours actifs</div><div class="stat-value">${activeDays.length}</div></div><div class="stat"><div class="stat-label">📊 Total appels/semaine</div><div class="stat-value">${round(totalWeekCalls,0)}</div></div><div class="stat"><div class="stat-label">📈 Moyenne/jour</div><div class="stat-value">${activeDays.length>0?round(totalWeekCalls/activeDays.length,0):0}</div></div>`;
+
+        const totalPeriodCalls=totalWeekCalls*weekCount;
+        const avgPerWeek=totalWeekCalls;
+        const avgPerDay=activeDays.length>0?totalWeekCalls/activeDays.length:0;
+
+        const weeklyStats=q('#weeklyStats');
+        weeklyStats.innerHTML=`
+          <div class="stat"><div class="stat-label">📅 Période simulée</div><div class="stat-value">${weekCount} semaine${weekCount>1?'s':''}</div></div>
+          <div class="stat"><div class="stat-label">📊 Total appels/période</div><div class="stat-value">${round(totalPeriodCalls,0)}</div></div>
+          <div class="stat"><div class="stat-label">📈 Appels/semaine</div><div class="stat-value">${round(avgPerWeek,0)}</div></div>
+          <div class="stat"><div class="stat-label">⏱️ Appels/jour</div><div class="stat-value">${round(avgPerDay,0)}</div></div>`;
+
+        // Analyse multi-semaines : détecter les répétitions
+        const analysisDiv=q('#multiWeekAnalysis');
+        if(weekCount>1){
+          let analysisHTML='<div class="card" style="background:var(--bg);margin-top:0"><div class="card-header" style="background:var(--surface)"><div class="card-title">🔍 Analyse de rotation</div></div><div class="card-body">';
+
+          // Calculer le nombre de passages par titre sur la période
+          const categoryAnalysis=state.categories.map(cat=>{
+            const callsPerWeek=days.reduce((sum,_,dayIdx)=>{
+              if(!activeDays.includes(dayIdx))return sum;
+              let dayTotal=0;
+              for(let h=0;h<state.hoursPerDay;h++){
+                const key=`${dayIdx}-${h}`;
+                const clockId=state.clockGrid[key];
+                const clock=state.clocks.find(c=>c.id===clockId);
+                if(clock&&clock.sequence.includes(cat.code)){
+                  const maxPositions=18;
+                  const seqLength=clock.sequence.length;
+                  const callsPerCat=Math.floor(maxPositions/seqLength);
+                  const catIdx=clock.sequence.indexOf(cat.code);
+                  const remainder=maxPositions%seqLength;
+                  dayTotal+=callsPerCat+(catIdx<remainder?1:0);
+                }
+              }
+              return sum+dayTotal;
+            },0);
+
+            const totalCalls=callsPerWeek*weekCount;
+            const titlesInCat=cat.titles||1;
+            const passesPerTitle=titlesInCat>0?totalCalls/titlesInCat:0;
+            const avgIntervalMinutes=passesPerTitle>0?(60*24*7*weekCount)/passesPerTitle:0;
+
+            return{code:cat.code,titles:titlesInCat,totalCalls,passesPerTitle,avgIntervalMinutes};
+          });
+
+          analysisHTML+='<div style="overflow-x:auto"><table><thead><tr><th>Catégorie</th><th>Nb titres</th><th>Appels total</th><th>Passages/titre</th><th>Intervalle moyen</th><th>État</th></tr></thead><tbody>';
+
+          categoryAnalysis.forEach(cat=>{
+            let status='';
+            let statusColor='';
+            if(cat.passesPerTitle>7*weekCount){
+              status='🔥 Sur-rotation';
+              statusColor='color:#ef4444';
+            }else if(cat.passesPerTitle<(7*weekCount)/2){
+              status='❄️ Sous-rotation';
+              statusColor='color:#60a5fa';
+            }else{
+              status='✅ Équilibré';
+              statusColor='color:#10b981';
+            }
+
+            const fl=firstLetterCode(cat.code);
+            const cls=fl?('cat-'+fl):'cat-neutral';
+            analysisHTML+=`<tr><td><span class="pill ${cls}">${cat.code||'—'}</span></td><td>${cat.titles}</td><td>${round(cat.totalCalls,0)}</td><td>${round(cat.passesPerTitle,1)}</td><td>${minutesToHHMM(cat.avgIntervalMinutes)}</td><td style="${statusColor};font-weight:600">${status}</td></tr>`;
+          });
+
+          analysisHTML+='</tbody></table></div></div></div>';
+          analysisDiv.innerHTML=analysisHTML;
+        }else{
+          analysisDiv.innerHTML='';
+        }
       }
       
       function renderHeatmap(){
@@ -1292,6 +1402,92 @@
       qq('.tab').forEach(tab=>{tab.addEventListener('click',()=>{qq('.tab').forEach(t=>t.classList.remove('active'));qq('.tab-content').forEach(tc=>tc.classList.remove('active'));tab.classList.add('active');q(`#tab-${tab.dataset.tab}`).classList.add('active');const tabId=tab.dataset.tab;if(tabId==='clocks'){renderClocks();renderGrid()}if(tabId==='quotas'){renderQuotaRegimes();renderFrenchQuotas()}if(tabId==='hourly')renderHourlyChart();if(tabId==='weekly')renderWeeklyChart();if(tabId==='heatmap')renderHeatmap()})});
       
       q('#addCat').addEventListener('click',()=>{state.categories.push({code:'',titles:0,frenchTitles:0});save();renderCategories(false);compute();renderResults();renderClocks()});
+
+      q('#importCSV').addEventListener('click',()=>{
+        const input=document.createElement('input');
+        input.type='file';
+        input.accept='.csv,text/csv';
+        input.onchange=()=>{
+          const file=input.files[0];
+          const reader=new FileReader();
+          reader.onload=()=>{
+            try{
+              const text=reader.result;
+              const lines=text.split(/\r?\n/).filter(l=>l.trim());
+
+              if(lines.length<2){
+                alert('❌ Fichier CSV vide ou invalide');
+                return;
+              }
+
+              // Détecter le séparateur (virgule ou point-virgule)
+              const separator=lines[0].includes(';')?';':',';
+
+              // Parse header
+              const headers=lines[0].split(separator).map(h=>h.trim().toLowerCase());
+
+              // Trouver les indices des colonnes
+              const codeIdx=headers.findIndex(h=>h.includes('code')||h.includes('cat'));
+              const titlesIdx=headers.findIndex(h=>h.includes('titre')&&!h.includes('fr'));
+              const frenchIdx=headers.findIndex(h=>(h.includes('fr')||h.includes('français')||h.includes('francais'))&&h.includes('titre'));
+
+              if(codeIdx===-1||titlesIdx===-1){
+                alert('❌ Format CSV invalide.\n\nFormat attendu:\nCode,Titres,TitresFR\nP,15,8\nA,20,12\n\nOu avec point-virgule:\nCode;Titres;TitresFR');
+                return;
+              }
+
+              // Parse les données
+              const newCategories=[];
+              for(let i=1;i<lines.length;i++){
+                const values=lines[i].split(separator).map(v=>v.trim());
+                if(values.length<2)continue;
+
+                const code=values[codeIdx]||'';
+                const titles=parseInt(values[titlesIdx])||0;
+                const frenchTitles=frenchIdx!==-1?parseInt(values[frenchIdx])||0:0;
+
+                if(code){
+                  newCategories.push({code,titles,frenchTitles});
+                }
+              }
+
+              if(newCategories.length===0){
+                alert('❌ Aucune catégorie valide trouvée dans le CSV');
+                return;
+              }
+
+              // Demander si on remplace ou ajoute
+              const replace=confirm(`📥 Import réussi : ${newCategories.length} catégorie(s) trouvée(s).\n\n✅ OK = Remplacer les catégories existantes\n❌ Annuler = Ajouter aux catégories existantes`);
+
+              if(replace){
+                state.categories=newCategories;
+              }else{
+                // Ajouter uniquement les nouvelles catégories (éviter les doublons)
+                newCategories.forEach(newCat=>{
+                  const exists=state.categories.find(c=>c.code===newCat.code);
+                  if(!exists){
+                    state.categories.push(newCat);
+                  }
+                });
+              }
+
+              save();
+              renderCategories(false);
+              compute();
+              renderResults();
+              renderClocks();
+
+              alert(`✅ Import terminé : ${newCategories.length} catégorie(s) ${replace?'importée(s)':'ajoutée(s)'}`);
+            }catch(e){
+              console.error(e);
+              alert('❌ Erreur lors de l\'import du fichier CSV');
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      });
+
       q('#addClock').addEventListener('click',()=>{state.clocks.push({id:generateId(),name:'Nouvelle horloge',sequence:[]});save();renderClocks()});
       q('#clearGrid').addEventListener('click',()=>{if(confirm('Effacer toute la grille d\'affectation ?')){state.clockGrid={};save();renderGrid();compute();renderResults()}});
 
@@ -1386,7 +1582,12 @@
       q('#assignModal').addEventListener('click',e=>{if(e.target.id==='assignModal')closeAssignModal()});
       
       q('#hoursPerDay').addEventListener('input',()=>{state.hoursPerDay=Number(q('#hoursPerDay').value||24);save();compute();renderResults()});
-      
+
+      const weekCountEl=q('#weekCount');
+      if(weekCountEl){
+        weekCountEl.addEventListener('change',()=>renderWeeklyChart());
+      }
+
       q('#exportCSV').addEventListener('click',()=>{const headers=['Code','Nb titres','Total appels/jour','Appels/heure (moy.)','Passages titre/jour','Intervalle moyen'];const rows=computed.perCat.map(r=>[r.code||'—',r.titles||0,round(r.totalCallsPerDay,2),round(r.callsPerHourAvg,2),round(r.passesPerTitlePerDay,2),minutesToHHMM(r.intervalMin)]);const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='resultats-rotations.csv';a.click();URL.revokeObjectURL(url)});
       q('#exportJSON').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='preset-rotations-v3.json';a.click();URL.revokeObjectURL(url)});
       q('#importJSON').addEventListener('click',()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{const f=inp.files[0];const rd=new FileReader();rd.onload=()=>{try{Object.assign(state,JSON.parse(rd.result));save();renderCategories(false);renderClocks();renderGrid();renderQuotaRegimes();compute();renderResults()}catch(e){alert('❌ Fichier invalide')}};rd.readAsText(f)};inp.click()});

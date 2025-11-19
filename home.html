@@ -639,9 +639,60 @@
             el.addEventListener('dragstart',e=>{
               e.dataTransfer.effectAllowed='copy';
               e.dataTransfer.setData('text/plain',el.dataset.catCode);
+              e.dataTransfer.setData('source','available');
             });
           });
-          
+
+          // Drag and drop for sequence items (reordering)
+          clockCard.querySelectorAll('.sequence-item').forEach(el=>{
+            el.addEventListener('dragstart',e=>{
+              e.dataTransfer.effectAllowed='move';
+              e.dataTransfer.setData('draggedIndex',el.dataset.seqIdx);
+              e.dataTransfer.setData('clockIdx',idx);
+              e.dataTransfer.setData('source','sequence');
+              el.style.opacity='0.5';
+            });
+
+            el.addEventListener('dragend',e=>{
+              el.style.opacity='1';
+            });
+
+            el.addEventListener('dragover',e=>{
+              e.preventDefault();
+              e.dataTransfer.dropEffect='move';
+              el.style.borderLeft='3px solid var(--primary)';
+            });
+
+            el.addEventListener('dragleave',e=>{
+              el.style.borderLeft='';
+            });
+
+            el.addEventListener('drop',e=>{
+              e.preventDefault();
+              e.stopPropagation();
+              el.style.borderLeft='';
+
+              const source=e.dataTransfer.getData('source');
+              if(source==='sequence'){
+                const draggedIdx=parseInt(e.dataTransfer.getData('draggedIndex'));
+                const targetIdx=parseInt(el.dataset.seqIdx);
+                const clockIdx=parseInt(e.dataTransfer.getData('clockIdx'));
+
+                if(clockIdx===idx&&draggedIdx!==targetIdx){
+                  const sequence=state.clocks[idx].sequence;
+                  const draggedItem=sequence[draggedIdx];
+                  sequence.splice(draggedIdx,1);
+                  const newTargetIdx=draggedIdx<targetIdx?targetIdx-1:targetIdx;
+                  sequence.splice(newTargetIdx,0,draggedItem);
+                  save();
+                  renderClocks();
+                  compute();
+                  renderResults();
+                }
+              }
+            });
+          });
+
           const seqZone=clockCard.querySelector('[data-sequence]');
           seqZone.addEventListener('dragover',e=>{
             e.preventDefault();
@@ -649,13 +700,16 @@
           });
           seqZone.addEventListener('drop',e=>{
             e.preventDefault();
-            const catCode=e.dataTransfer.getData('text/plain');
-            if(catCode){
-              state.clocks[idx].sequence.push(catCode);
-              save();
-              renderClocks();
-              compute();
-              renderResults();
+            const source=e.dataTransfer.getData('source');
+            if(source!=='sequence'){
+              const catCode=e.dataTransfer.getData('text/plain');
+              if(catCode){
+                state.clocks[idx].sequence.push(catCode);
+                save();
+                renderClocks();
+                compute();
+                renderResults();
+              }
             }
           });
           

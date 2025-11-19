@@ -218,7 +218,7 @@
             <div class="toolbar">
               <button class="btn btn-secondary btn-sm" id="presetCHR">🔥 Preset CHR</button>
               <button class="btn btn-secondary btn-sm" id="presetLocale">📻 Preset Locale</button>
-              <button class="btn btn-primary btn-sm" id="importCSV">📥 Importer CSV</button>
+              <button class="btn btn-primary btn-sm" id="importCSV" title="Format CSV attendu :&#10;Code,Titres,TitresFR&#10;P,15,8&#10;A,20,12&#10;&#10;Vous pouvez aussi utiliser ; comme séparateur">📥 Importer CSV</button>
             </div>
             <div id="categoriesContainer"></div>
           </div>
@@ -254,7 +254,10 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title"><span>🕐</span><span>Gestion des horloges</span></div>
-          <button class="btn btn-primary btn-sm" id="addClock">+ Créer une horloge</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" id="importClockCSV" title="Format CSV attendu :&#10;Nom,Séquence&#10;Matinale,P,A,B,C&#10;Journée,A,B,C&#10;&#10;Vous pouvez aussi utiliser ; comme séparateur">📥 Importer CSV</button>
+            <button class="btn btn-primary btn-sm" id="addClock">+ Créer une horloge</button>
+          </div>
         </div>
         <div class="card-body">
           <div class="alert-info">
@@ -461,13 +464,41 @@
     document.addEventListener('DOMContentLoaded',function(){
       const q=s=>document.querySelector(s);
       const qq=s=>Array.from(document.querySelectorAll(s));
-      
+
       function pad2(n){return String(n).padStart(2,'0')}
       function minutesToHHMM(x){if(!isFinite(x)||x<=0)return'—';const m=Math.round(x);const h=Math.floor(m/60);return h+'h'+String(m%60).padStart(2,'0')}
       function round(x,d=2){if(!isFinite(x))return 0;const p=Math.pow(10,d);return Math.round(x*p)/p}
       function firstLetterCode(code){return(code||'').toString().trim().charAt(0).toUpperCase()}
       function getCategoryColor(code){const fl=firstLetterCode(code);const colorMap={'P':'#8b5cf6','A':'#ef4444','B':'#10b981','C':'#f59e0b','D':'#ec4899','E':'#6366f1','S':'#eab308','R':'#f97316','G':'#a855f7','H':'#06b6d4','I':'#84cc16','J':'#f43f5e','K':'#8b5cf6','L':'#06b6d4','M':'#10b981','N':'#f59e0b','O':'#ec4899','Q':'#6366f1','T':'#14b8a6','U':'#f97316','V':'#a855f7','W':'#84cc16','X':'#f43f5e','Y':'#8b5cf6','Z':'#06b6d4'};return colorMap[fl]||'#64748b'}
       function generateId(){return 'id-'+Date.now()+'-'+Math.random().toString(36).substr(2,9)}
+
+      // Parse "2h30" => 2.5 ou "3h" => 3 ou "30min" => 0.5
+      function parseTimeToHours(str){
+        if(!str||str==='')return 0;
+        str=str.toString().toLowerCase().trim();
+        const hourMatch=str.match(/(\d+)h(\d*)/);
+        if(hourMatch){
+          const h=parseInt(hourMatch[1])||0;
+          const m=parseInt(hourMatch[2])||0;
+          return h+(m/60);
+        }
+        const minMatch=str.match(/(\d+)\s*m/);
+        if(minMatch){
+          return parseInt(minMatch[1])/60;
+        }
+        const numVal=parseFloat(str);
+        return isNaN(numVal)?0:numVal;
+      }
+
+      // 2.5 => "2h30" ou 3 => "3h" ou 0.5 => "30min"
+      function hoursToTimeString(hours){
+        if(!hours||hours<=0)return'';
+        const h=Math.floor(hours);
+        const m=Math.round((hours-h)*60);
+        if(h===0&&m>0)return m+'min';
+        if(m===0)return h+'h';
+        return h+'h'+String(m).padStart(2,'0');
+      }
       
       const QUOTA_REGIMES = {
         general: {
@@ -559,10 +590,10 @@
               <div><label>Code catégorie</label><input type="text" value="${cat.code||''}" data-cat="${catIdx}" data-field="code" placeholder="Ex: A, B, P..."></div>
               <div><label>Nombre de titres</label><input type="number" min="0" step="1" value="${cat.titles||0}" data-cat="${catIdx}" data-field="titles"></div>
               <div><label>Titres FR</label><input type="number" min="0" step="1" value="${cat.frenchTitles||0}" data-cat="${catIdx}" data-field="frenchTitles" placeholder="Nb FR"></div>
-              <div><label>Séparation min. (heures)</label><input type="number" min="0" step="0.5" value="${cat.minSeparation||0}" data-cat="${catIdx}" data-field="minSeparation" placeholder="Ex: 2.5"></div>
+              <div><label>Séparation min.</label><input type="text" value="${hoursToTimeString(cat.minSeparation||0)}" data-cat="${catIdx}" data-field="minSeparation" placeholder="Ex: 2h30"></div>
             </div>`;
           container.appendChild(catCard);
-          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='frenchTitles'||field==='minSeparation')val=Number(val||0);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;state.categories[idx][field]=val;save();compute();if(field==='code'){renderCategories();renderClocks();}renderResults()})});
+          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='frenchTitles')val=Number(val||0);if(field==='minSeparation')val=parseTimeToHours(val);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;state.categories[idx][field]=val;save();compute();if(field==='code'){renderCategories();renderClocks();}renderResults()})});
           catCard.querySelector('[data-delete-cat]').addEventListener('click',()=>{state.categories.splice(catIdx,1);save();compute();renderCategories(false);renderResults();renderClocks()});
         });
         q('#sumTitles').textContent=state.categories.reduce((a,b)=>a+(Number(b.titles)||0),0);
@@ -1019,7 +1050,7 @@
           const minSeparation=cat.minSeparation||0;
           if(minSeparation>0&&intervalHours>0&&intervalHours<minSeparation){
             const diff=minSeparation-intervalHours;
-            alerts.push({cat:cat.code||'Sans code',message:`⚠️ Règle de séparation non respectée : intervalle réel ${minutesToHHMM(intervalMin)} (${round(intervalHours,2)}h) < minimum requis ${round(minSeparation,2)}h. Écart : ${round(diff,2)}h. Réduisez les appels ou augmentez le nombre de titres.`});
+            alerts.push({cat:cat.code||'Sans code',message:`⚠️ Règle de séparation non respectée : intervalle réel ${minutesToHHMM(intervalMin)} < minimum requis ${hoursToTimeString(minSeparation)}. Écart : ${hoursToTimeString(diff)}. Réduisez les appels ou augmentez le nombre de titres.`});
           }
 
           return{code:cat.code,titles:cat.titles,totalCallsPerDay,callsPerHourAvg,passesPerTitlePerDay,intervalMin,minSeparation};
@@ -1321,25 +1352,12 @@
             return{code:cat.code,titles:titlesInCat,totalCalls,passesPerTitle,avgIntervalMinutes};
           });
 
-          analysisHTML+='<div style="overflow-x:auto"><table><thead><tr><th>Catégorie</th><th>Nb titres</th><th>Appels total</th><th>Passages/titre</th><th>Intervalle moyen</th><th>État</th></tr></thead><tbody>';
+          analysisHTML+='<div style="overflow-x:auto"><table><thead><tr><th>Catégorie</th><th>Nb titres</th><th>Appels total</th><th>Passages/titre</th><th>Intervalle moyen</th></tr></thead><tbody>';
 
           categoryAnalysis.forEach(cat=>{
-            let status='';
-            let statusColor='';
-            if(cat.passesPerTitle>7*weekCount){
-              status='🔥 Sur-rotation';
-              statusColor='color:#ef4444';
-            }else if(cat.passesPerTitle<(7*weekCount)/2){
-              status='❄️ Sous-rotation';
-              statusColor='color:#60a5fa';
-            }else{
-              status='✅ Équilibré';
-              statusColor='color:#10b981';
-            }
-
             const fl=firstLetterCode(cat.code);
             const cls=fl?('cat-'+fl):'cat-neutral';
-            analysisHTML+=`<tr><td><span class="pill ${cls}">${cat.code||'—'}</span></td><td>${cat.titles}</td><td>${round(cat.totalCalls,0)}</td><td>${round(cat.passesPerTitle,1)}</td><td>${minutesToHHMM(cat.avgIntervalMinutes)}</td><td style="${statusColor};font-weight:600">${status}</td></tr>`;
+            analysisHTML+=`<tr><td><span class="pill ${cls}">${cat.code||'—'}</span></td><td>${cat.titles}</td><td>${round(cat.totalCalls,0)}</td><td>${round(cat.passesPerTitle,1)}</td><td>${minutesToHHMM(cat.avgIntervalMinutes)}</td></tr>`;
           });
 
           analysisHTML+='</tbody></table></div></div></div>';
@@ -1489,6 +1507,80 @@
       });
 
       q('#addClock').addEventListener('click',()=>{state.clocks.push({id:generateId(),name:'Nouvelle horloge',sequence:[]});save();renderClocks()});
+
+      q('#importClockCSV').addEventListener('click',()=>{
+        const input=document.createElement('input');
+        input.type='file';
+        input.accept='.csv,text/csv';
+        input.onchange=()=>{
+          const file=input.files[0];
+          const reader=new FileReader();
+          reader.onload=()=>{
+            try{
+              const text=reader.result;
+              const lines=text.split(/\r?\n/).filter(l=>l.trim());
+
+              if(lines.length<2){
+                alert('❌ Fichier CSV vide ou invalide');
+                return;
+              }
+
+              // Détecter le séparateur (virgule ou point-virgule)
+              const separator=lines[0].includes(';')?';':',';
+
+              // Parse header (optionnel, on le saute si c'est "Nom,Séquence")
+              let startIdx=0;
+              if(lines[0].toLowerCase().includes('nom')||lines[0].toLowerCase().includes('horloge')){
+                startIdx=1;
+              }
+
+              // Parse les données
+              const newClocks=[];
+              for(let i=startIdx;i<lines.length;i++){
+                const values=lines[i].split(separator).map(v=>v.trim());
+                if(values.length<2)continue;
+
+                const name=values[0]||'Horloge';
+                const sequence=values.slice(1).filter(v=>v!=='');
+
+                if(sequence.length>0){
+                  newClocks.push({
+                    id:generateId(),
+                    name:name,
+                    sequence:sequence,
+                    collapsed:false
+                  });
+                }
+              }
+
+              if(newClocks.length===0){
+                alert('❌ Aucune horloge valide trouvée dans le CSV');
+                return;
+              }
+
+              // Demander si on remplace ou ajoute
+              const replace=confirm(`📥 Import réussi : ${newClocks.length} horloge(s) trouvée(s).\n\n✅ OK = Remplacer les horloges existantes\n❌ Annuler = Ajouter aux horloges existantes`);
+
+              if(replace){
+                state.clocks=newClocks;
+              }else{
+                state.clocks.push(...newClocks);
+              }
+
+              save();
+              renderClocks();
+
+              alert(`✅ Import terminé : ${newClocks.length} horloge(s) ${replace?'importée(s)':'ajoutée(s)'}`);
+            }catch(e){
+              console.error(e);
+              alert('❌ Erreur lors de l\'import du fichier CSV');
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      });
+
       q('#clearGrid').addEventListener('click',()=>{if(confirm('Effacer toute la grille d\'affectation ?')){state.clockGrid={};save();renderGrid();compute();renderResults()}});
 
       q('#assignToAll').addEventListener('click',()=>{

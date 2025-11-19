@@ -133,8 +133,10 @@
     .clock-body{transition:all 0.3s ease;overflow:hidden;opacity:1;max-height:2000px}
     .clock-body.collapsed{max-height:0;opacity:0;margin-top:0}
     .clock-sequence{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding:16px;background:var(--surface);border-radius:8px;min-height:60px;align-items:center}
-    .sequence-item{position:relative;cursor:move}
-    .sequence-item .remove-seq{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;display:none;align-items:center;justify-content:center;font-size:12px;cursor:pointer;font-weight:700}
+    .sequence-item{position:relative;cursor:move;transition:border 0.2s,opacity 0.2s}
+    .sequence-item.dragging{opacity:0.4}
+    .sequence-item .pill{pointer-events:none}
+    .sequence-item .remove-seq{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;display:none;align-items:center;justify-content:center;font-size:12px;cursor:pointer;font-weight:700;pointer-events:auto}
     .sequence-item:hover .remove-seq{display:flex}
     .clock-empty{color:var(--text-muted);font-style:italic;text-align:center;padding:20px}
     .available-cats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -635,6 +637,10 @@
             renderClocks();
           });
 
+          // Variables pour le drag & drop
+          let draggedSequenceItem=null;
+          let draggedFromClockIdx=null;
+
           clockCard.querySelectorAll('.draggable-cat').forEach(el=>{
             el.addEventListener('dragstart',e=>{
               e.dataTransfer.effectAllowed='copy';
@@ -644,66 +650,97 @@
           });
 
           // Drag and drop for sequence items (reordering)
-          clockCard.querySelectorAll('.sequence-item').forEach(el=>{
+          clockCard.querySelectorAll('.sequence-item').forEach((el,elIdx)=>{
             el.addEventListener('dragstart',e=>{
+              draggedSequenceItem=parseInt(el.dataset.seqIdx);
+              draggedFromClockIdx=idx;
               e.dataTransfer.effectAllowed='move';
-              e.dataTransfer.setData('draggedIndex',el.dataset.seqIdx);
-              e.dataTransfer.setData('clockIdx',idx);
               e.dataTransfer.setData('source','sequence');
-              el.style.opacity='0.5';
+              e.dataTransfer.setData('text/plain','sequence-move');
+              setTimeout(()=>{el.classList.add('dragging')},0);
             });
 
             el.addEventListener('dragend',e=>{
-              el.style.opacity='1';
+              el.classList.remove('dragging');
+              draggedSequenceItem=null;
+              draggedFromClockIdx=null;
+              clockCard.querySelectorAll('.sequence-item').forEach(item=>{
+                item.style.borderLeft='';
+                item.style.borderRight='';
+                item.classList.remove('dragging');
+              });
             });
 
             el.addEventListener('dragover',e=>{
               e.preventDefault();
-              e.dataTransfer.dropEffect='move';
-              el.style.borderLeft='3px solid var(--primary)';
+              if(draggedSequenceItem!==null&&draggedFromClockIdx===idx){
+                e.dataTransfer.dropEffect='move';
+                const targetIdx=parseInt(el.dataset.seqIdx);
+                if(draggedSequenceItem<targetIdx){
+                  el.style.borderRight='3px solid var(--primary)';
+                  el.style.borderLeft='';
+                }else if(draggedSequenceItem>targetIdx){
+                  el.style.borderLeft='3px solid var(--primary)';
+                  el.style.borderRight='';
+                }
+              }
             });
 
             el.addEventListener('dragleave',e=>{
-              el.style.borderLeft='';
+              // Nettoyer les bordures uniquement si on quitte vraiment l'élément
+              if(!el.contains(e.relatedTarget)){
+                el.style.borderLeft='';
+                el.style.borderRight='';
+              }
             });
 
             el.addEventListener('drop',e=>{
               e.preventDefault();
               e.stopPropagation();
-              el.style.borderLeft='';
 
-              const source=e.dataTransfer.getData('source');
-              if(source==='sequence'){
-                const draggedIdx=parseInt(e.dataTransfer.getData('draggedIndex'));
+              if(draggedSequenceItem!==null&&draggedFromClockIdx===idx){
                 const targetIdx=parseInt(el.dataset.seqIdx);
-                const clockIdx=parseInt(e.dataTransfer.getData('clockIdx'));
 
-                if(clockIdx===idx&&draggedIdx!==targetIdx){
+                if(draggedSequenceItem!==targetIdx){
                   const sequence=state.clocks[idx].sequence;
-                  const draggedItem=sequence[draggedIdx];
-                  sequence.splice(draggedIdx,1);
-                  const newTargetIdx=draggedIdx<targetIdx?targetIdx-1:targetIdx;
+                  const draggedItem=sequence[draggedSequenceItem];
+
+                  // Retirer l'élément de sa position actuelle
+                  sequence.splice(draggedSequenceItem,1);
+
+                  // Calculer la nouvelle position
+                  // Après suppression, si on déplaçait vers la droite, targetIdx est décalé de -1
+                  const newTargetIdx=draggedSequenceItem<targetIdx?targetIdx-1:targetIdx;
+
+                  // Insérer à la nouvelle position
                   sequence.splice(newTargetIdx,0,draggedItem);
+
                   save();
                   renderClocks();
                   compute();
                   renderResults();
                 }
               }
+
+              el.style.borderLeft='';
+              el.style.borderRight='';
             });
           });
 
           const seqZone=clockCard.querySelector('[data-sequence]');
           seqZone.addEventListener('dragover',e=>{
-            e.preventDefault();
-            e.dataTransfer.dropEffect='copy';
+            const source=e.dataTransfer.getData('source');
+            if(source!=='sequence'||draggedSequenceItem===null){
+              e.preventDefault();
+              e.dataTransfer.dropEffect='copy';
+            }
           });
           seqZone.addEventListener('drop',e=>{
             e.preventDefault();
             const source=e.dataTransfer.getData('source');
             if(source!=='sequence'){
               const catCode=e.dataTransfer.getData('text/plain');
-              if(catCode){
+              if(catCode&&catCode!=='sequence-move'){
                 state.clocks[idx].sequence.push(catCode);
                 save();
                 renderClocks();

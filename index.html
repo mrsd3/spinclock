@@ -1,0 +1,1596 @@
+<!--
+13 février 2026 — MartialDem — V3.1.1
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulateur de rotations</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg-primary:#0a0a1a;--bg-secondary:#111127;--bg-card:rgba(255,255,255,0.04);--bg-card-hover:rgba(255,255,255,0.06);
+      --accent:#3b82f6;--accent-light:#60a5fa;--accent-glow:rgba(59,130,246,0.25);--accent-alt:#1d4ed8;--accent-alt-glow:rgba(29,78,216,0.25);
+      --primary:#3b82f6;--primary-dark:#2563eb;--primary-light:#60a5fa;
+      --success:#10b981;--warning:#f59e0b;--danger:#f43f5e;
+      --bg:#0a0a1a;--surface:rgba(255,255,255,0.04);--surface-light:rgba(255,255,255,0.08);
+      --text:#f1f5f9;--text-muted:#94a3b8;--text-secondary:#94a3b8;
+      --border:rgba(255,255,255,0.08);--border-hover:rgba(255,255,255,0.15);
+      --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.2);--shadow-md:0 8px 32px rgba(0,0,0,0.3);--shadow-lg:0 16px 48px rgba(0,0,0,0.4);
+      --transition:0.2s cubic-bezier(0.4,0,0.2,1);
+      --cat-A:#ef4444;--cat-B:#3b82f6;--cat-C:#f59e0b;--cat-D:#ec4899;--cat-E:#8b5cf6;--cat-F:#06b6d4;
+      --cat-G:#10b981;--cat-H:#f97316;--cat-I:#14b8a6;--cat-J:#84cc16;--cat-K:#64748b;--cat-L:#0ea5e9;
+      --cat-M:#22c55e;--cat-N:#eab308;--cat-O:#d946ef;--cat-P:#6366f1;--cat-Q:#0891b2;--cat-R:#ea580c;
+      --cat-S:#2563eb;--cat-T:#059669;--cat-U:#c026d3;--cat-V:#7c3aed;--cat-W:#65a30d;--cat-X:#dc2626;
+      --cat-Y:#ca8a04;--cat-Z:#0d9488;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{background:var(--bg-primary);scroll-behavior:smooth}
+    body{background:var(--bg-primary);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;padding:20px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+    .container{max-width:1600px;margin:0 auto;position:relative;z-index:1}
+    .header{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;margin-bottom:24px;position:relative;overflow:hidden;transition:border-color var(--transition)}
+    .header:hover{border-color:var(--border-hover)}
+    .header-content{position:relative;z-index:1}
+    h1{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-0.03em;margin-bottom:8px;background:linear-gradient(135deg,var(--accent-light) 0%,var(--text) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .version{display:inline-block;background:rgba(255,255,255,0.08);color:var(--accent-light);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;transition:all var(--transition);border:1px solid var(--border)}
+    .version:hover{background:rgba(59,130,246,0.2);border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px var(--accent-glow)}
+    .subtitle{color:var(--text-secondary);font-size:15px;margin-top:12px;line-height:1.6}
+    .tabs{display:flex;gap:8px;margin-bottom:24px;background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px;border-radius:var(--radius-lg);border:1px solid var(--border);overflow-x:auto}
+    .tab{flex:1;min-width:140px;padding:12px 20px;background:transparent;color:var(--text-muted);border:none;border-radius:var(--radius-md);font-weight:600;cursor:pointer;transition:all var(--transition);display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;font-family:inherit}
+    .tab:hover{background:rgba(255,255,255,0.06);color:var(--text)}
+    .tab.active{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff;box-shadow:0 4px 16px var(--accent-glow)}
+    .card{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-sm);transition:border-color var(--transition),background var(--transition),transform var(--transition)}
+    .card:hover{border-color:var(--border-hover);background:var(--bg-card-hover);transform:translateY(-2px)}
+    .card-header{background:rgba(255,255,255,0.03);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+    .card-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;color:var(--text)}
+    .card-body{padding:24px}
+    .btn{appearance:none;border:none;border-radius:var(--radius-md);padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;font-family:inherit;position:relative;overflow:hidden}
+    .btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,0.1));opacity:0;transition:opacity var(--transition)}
+    .btn:hover::before{opacity:1}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px var(--accent-glow)}
+    .btn-primary:active{transform:translateY(0)}
+    .btn-secondary{background:var(--bg-card);color:var(--text);border:1px solid var(--border)}
+    .btn-secondary:hover{border-color:var(--accent);background:rgba(59,130,246,0.1);box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px)}
+    .btn-secondary:active{transform:translateY(0)}
+    .btn-secondary.active{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff;border-color:var(--accent)}
+    .btn-danger{background:linear-gradient(135deg,#f43f5e,#e11d48);color:#fff}
+    .btn-danger:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(244,63,94,0.4)}
+    .btn-danger:active{transform:translateY(0)}
+    .btn-sm{padding:6px 14px;font-size:13px}
+    input,select{width:100%;padding:12px 14px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text);font-size:14px;transition:all var(--transition);font-family:inherit;appearance:none;-webkit-appearance:none}
+    input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);background:rgba(0,0,0,0.4)}
+    label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+    .grid{display:grid;gap:16px}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:repeat(3,1fr)}
+    .grid-4{grid-template-columns:repeat(4,1fr)}
+    @media(max-width:1200px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+    .stat{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;transition:border-color var(--transition),background var(--transition)}
+    .stat:hover{border-color:var(--border-hover);background:var(--bg-card-hover)}
+    .stat::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(180deg,var(--accent),var(--accent-alt));border-radius:0 2px 2px 0}
+    .stat-label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+    .stat-value{font-size:28px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
+    .stat-value.editable{background:transparent;border:none;color:var(--text);padding:0;width:100%;font-size:28px;font-weight:800}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:700;min-width:48px;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+    .cat-P{background:var(--cat-P);color:#fff}.cat-A{background:var(--cat-A);color:#fff}.cat-B{background:var(--cat-B);color:#fff}
+    .cat-C{background:var(--cat-C);color:#fff}.cat-D{background:var(--cat-D);color:#fff}.cat-E{background:var(--cat-E);color:#fff}
+    .cat-S{background:var(--cat-S);color:#fff}.cat-R{background:var(--cat-R);color:#fff}.cat-G{background:var(--cat-G);color:#fff}
+    .cat-H{background:var(--cat-H);color:#fff}.cat-I{background:var(--cat-I);color:#fff}.cat-J{background:var(--cat-J);color:#fff}
+    .cat-K{background:var(--cat-K);color:#fff}.cat-L{background:var(--cat-L);color:#fff}.cat-M{background:var(--cat-M);color:#fff}
+    .cat-N{background:var(--cat-N);color:#fff}.cat-O{background:var(--cat-O);color:#fff}.cat-Q{background:var(--cat-Q);color:#fff}
+    .cat-T{background:var(--cat-T);color:#fff}.cat-U{background:var(--cat-U);color:#fff}.cat-V{background:var(--cat-V);color:#fff}.cat-F{background:var(--cat-F);color:#fff}
+    .cat-W{background:var(--cat-W);color:#fff}.cat-X{background:var(--cat-X);color:#fff}.cat-Y{background:var(--cat-Y);color:#fff}.cat-Z{background:var(--cat-Z);color:#fff}
+    .cat-neutral{background:rgba(255,255,255,0.08);color:var(--text-muted)}
+    .category-card{background:var(--bg-card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;transition:all var(--transition)}
+    .category-card:hover{border-color:var(--accent);box-shadow:0 4px 16px var(--accent-glow)}
+    .category-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .alert{background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.3);border-left:4px solid var(--danger);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:20px}
+    .alert-title{font-weight:700;margin-bottom:8px;color:#fca5a5}
+    .alert-list{padding-left:20px;line-height:1.7}
+    .alert-info{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-left:4px solid var(--accent);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:20px;color:var(--text)}
+    .alert-warning{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-left:4px solid var(--warning);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:20px;color:#fcd34d}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:14px;text-align:left;border-bottom:1px solid var(--border)}
+    th{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;background:rgba(0,0,0,0.2)}
+    tr{transition:background var(--transition)}
+    tr:hover{background:rgba(255,255,255,0.03)}
+    .checkbox-wrapper{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,0,0,0.2);border-radius:var(--radius-md);cursor:pointer;transition:all var(--transition)}
+    .checkbox-wrapper:hover{background:rgba(255,255,255,0.06)}
+    .checkbox-wrapper input[type="checkbox"]{width:20px;height:20px;cursor:pointer;accent-color:var(--accent)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+    .chart-container{position:relative;height:400px;margin-top:20px}
+    .heatmap{display:grid;grid-template-columns:60px repeat(24,1fr);gap:4px;margin-top:20px}
+    .heatmap-label{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-muted)}
+    .heatmap-cell{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transition:all var(--transition);cursor:pointer;border:1px solid var(--border)}
+    .heatmap-cell:hover{transform:scale(1.1);z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5)}
+    .week-selector{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .day-btn{padding:8px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;font-size:13px;font-family:inherit}
+    .day-btn:hover{border-color:var(--accent);background:rgba(59,130,246,0.1)}
+    .day-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff;border-color:var(--accent);box-shadow:0 4px 12px var(--accent-glow)}
+    .footer{text-align:center;color:var(--text-muted);font-size:0.85rem;margin-top:40px;padding:20px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;z-index:1000;animation:fadeIn 0.3s}
+    .modal.show{display:flex}
+    .modal-panel{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-xl);max-width:600px;width:92%;max-height:80vh;overflow:hidden;box-shadow:var(--shadow-lg);animation:slideUp 0.3s}
+    .modal-header{background:rgba(255,255,255,0.03);padding:24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .modal-body{padding:24px;overflow-y:auto;max-height:calc(80vh - 80px)}
+    .modal-body ul{padding-left:20px;line-height:1.8}
+    .modal-body li{margin-bottom:12px}
+    .modal-body strong{color:var(--accent-light)}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .tab-content{display:none;animation:fadeUp 0.4s ease}
+    .tab-content.active{display:block}
+    
+    /* Clock styles */
+    .clock-card{background:var(--bg-card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;transition:all var(--transition)}
+    .clock-card:hover{border-color:var(--accent);box-shadow:0 4px 16px var(--accent-glow)}
+    .clock-card.collapsed{padding:20px 20px 12px 20px}
+    .clock-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+    .clock-card-header-left{display:flex;align-items:center;gap:12px;flex:1}
+    .clock-card-header-right{display:flex;align-items:center;gap:8px}
+    .clock-name{font-size:16px;font-weight:700;color:var(--text)}
+    .clock-counter{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px var(--accent-glow)}
+    .clock-toggle{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--transition);user-select:none;font-family:inherit}
+    .clock-toggle:hover{border-color:var(--accent);background:rgba(59,130,246,0.1)}
+    .clock-body{transition:all 0.3s ease;overflow:hidden;opacity:1;max-height:2000px}
+    .clock-body.collapsed{max-height:0;opacity:0;margin-top:0}
+    .clock-sequence{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding:16px;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:var(--radius-md);min-height:60px;align-items:center}
+    .sequence-item{position:relative;cursor:move}
+    .sequence-item .remove-seq{position:absolute;top:-8px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;display:none;align-items:center;justify-content:center;font-size:12px;cursor:pointer;font-weight:700}
+    .sequence-item:hover .remove-seq{display:flex}
+    .clock-empty{color:var(--text-muted);font-style:italic;text-align:center;padding:20px}
+    .available-cats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .draggable-cat{cursor:grab;user-select:none;transition:transform var(--transition)}
+    .draggable-cat:hover{transform:scale(1.1)}
+    .draggable-cat:active{cursor:grabbing;transform:scale(0.95)}
+    .grid-schedule{display:grid;grid-template-columns:80px repeat(24,1fr);gap:2px;margin-top:16px;overflow-x:auto}
+    .grid-header{position:sticky;left:0;background:var(--bg-secondary);z-index:10;font-weight:700;padding:8px;text-align:center;font-size:11px;color:var(--text-muted)}
+    .grid-hour-label{background:var(--bg-secondary);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--text-muted);position:sticky;top:0;z-index:5}
+    .grid-day-label{position:sticky;left:0;background:var(--bg-secondary);z-index:10;font-weight:700;padding:8px;font-size:12px}
+    .grid-cell{background:rgba(0,0,0,0.2);border:1px solid var(--border);padding:6px;min-height:40px;cursor:pointer;transition:all var(--transition);font-size:10px;font-weight:600;text-align:center;display:flex;align-items:center;justify-content:center;border-radius:4px}
+    .grid-cell:hover{background:rgba(255,255,255,0.06);transform:scale(1.05)}
+    .grid-cell.assigned{color:#fff;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.3)}
+    .positions-row{display:grid;grid-template-columns:120px 120px 1fr auto;gap:12px;align-items:center;padding:12px;background:var(--bg-card);border-radius:var(--radius-sm);margin-bottom:8px;border:1px solid var(--border)}
+    .positions-label{font-weight:600;color:var(--text-muted);font-size:13px}
+    .positions-badge{background:linear-gradient(135deg,var(--accent),var(--accent-alt));color:#fff;padding:6px 12px;border-radius:20px;font-weight:700;font-size:14px;text-align:center}
+    .quota-regimes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+    .quota-regime{background:var(--bg-card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;cursor:pointer;transition:all var(--transition);height:100%}
+    .quota-regime:hover{border-color:var(--accent-light);background:var(--bg-card-hover)}
+    .quota-regime.selected{border-color:var(--accent);background:rgba(59,130,246,0.08);box-shadow:0 4px 16px var(--accent-glow)}
+    .quota-regime-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+    .quota-regime-radio{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+    .quota-regime-name{font-size:15px;font-weight:700;color:var(--text)}
+    .quota-regime-desc{font-size:12px;color:var(--text-muted);margin-bottom:6px}
+    .quota-regime-details{font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:4px}
+    .quota-regime-examples{font-size:10px;color:var(--text-muted);opacity:0.8}
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+    ::selection{background:var(--accent);color:white}
+
+    /* Reduced motion */
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms !important;transition-duration:0.01ms !important}}
+
+    /* Responsive */
+    @media(max-width:640px){
+      body{padding:12px}
+      .header{padding:24px 16px}
+      h1{font-size:1.6rem}
+      .card-body{padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="mainContent">
+    <div class="header">
+      <div class="header-content">
+        <h1>Simulateur de rotations</h1>
+        <div class="version" id="version">V3.1.1</div>
+        <p class="subtitle">Planifie, visualise et analyse les rotations musicales avec horloges programmées</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="config">Configuration</button>
+      <button class="tab" data-tab="clocks">Horloges</button>
+      <button class="tab" data-tab="quotas">Quotas français</button>
+      <button class="tab" data-tab="hourly">Répartition horaire</button>
+      <button class="tab" data-tab="weekly">Vue hebdomadaire</button>
+      <button class="tab" data-tab="heatmap">Heatmap</button>
+    </div>
+
+    <!-- TAB: Configuration -->
+    <div class="tab-content active" id="tab-config">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Heures/jour</div>
+          <input class="stat-value editable" type="number" id="hoursPerDay" min="1" max="48" value="24">
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total appels/jour</div>
+          <div class="stat-value" id="sumCalls">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Titres actifs</div>
+          <div class="stat-value" id="sumTitles">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Intervalle moyen</div>
+          <div class="stat-value" id="globalInterval">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Quota français</div>
+          <div class="stat-value" id="homeFrenchQuota" style="font-size:32px">—</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Catégories</div>
+            <button class="btn btn-primary btn-sm" id="addCat">+ Ajouter</button>
+          </div>
+          <div class="card-body">
+            <div class="toolbar">
+              <button class="btn btn-secondary btn-sm" id="presetRadioA">Preset Radio A</button>
+              <button class="btn btn-secondary btn-sm" id="presetRadioB">Preset Radio B</button>
+              <button class="btn btn-secondary btn-sm" id="presetRadioC">Preset Radio C</button>
+            </div>
+            <div id="categoriesContainer"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Résultats & Analyse</div>
+            <button class="btn btn-secondary btn-sm" id="exportCSV">Export CSV</button>
+          </div>
+          <div class="card-body">
+            <div id="alertsContainer" style="margin-top:16px"></div>
+            <div style="overflow-x:auto;margin-top:20px">
+              <table id="resultsTable">
+                <thead>
+                  <tr><th>Catégorie</th><th>Titres</th><th>Appels/jour</th><th>Appels/h moy.</th><th>Passages titre/jour</th><th>Intervalle</th><th>% du total</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar" style="justify-content:center;margin-top:20px">
+        <button class="btn btn-secondary" id="exportJSON">Exporter preset</button>
+        <button class="btn btn-primary" id="importJSON">Importer preset</button>
+      </div>
+    </div>
+
+    <!-- TAB: Horloges -->
+    <div class="tab-content" id="tab-clocks">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Gestion des horloges</div>
+          <button class="btn btn-primary btn-sm" id="addClock">+ Créer une horloge</button>
+        </div>
+        <div class="card-body">
+          <div class="alert-info">
+            <strong>Comment ça marche</strong><br>
+            1. Créez des horloges avec des séquences de catégories (ex: P, A, B, C)<br>
+            2. Glissez-déposez les catégories pour créer votre séquence<br>
+            3. Assignez chaque horloge à des créneaux jour/heure dans la grille ci-dessous<br>
+            4. La simulation utilisera automatiquement vos horloges programmées
+          </div>
+          <div id="clocksContainer"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Affectation rapide</div>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Sélectionnez une horloge puis choisissez où l'affecter rapidement</p>
+          <div style="margin-bottom:16px">
+            <label>Horloge à affecter</label>
+            <select id="quickClockSelector" style="width:100%;max-width:400px">
+              <option value="">-- Sélectionner une horloge --</option>
+            </select>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-primary btn-sm" id="assignToAll">Affecter toute la grille</button>
+            <button class="btn btn-secondary btn-sm" id="assignToMonday">Lun</button>
+            <button class="btn btn-secondary btn-sm" id="assignToTuesday">Mar</button>
+            <button class="btn btn-secondary btn-sm" id="assignToWednesday">Mer</button>
+            <button class="btn btn-secondary btn-sm" id="assignToThursday">Jeu</button>
+            <button class="btn btn-secondary btn-sm" id="assignToFriday">Ven</button>
+            <button class="btn btn-secondary btn-sm" id="assignToSaturday">Sam</button>
+            <button class="btn btn-secondary btn-sm" id="assignToSunday">Dim</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Grille d'affectation</div>
+          <button class="btn btn-secondary btn-sm" id="clearGrid">Tout effacer</button>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Cliquez sur une case pour assigner une horloge à ce créneau jour/heure</p>
+          <div id="gridSchedule"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Quotas français -->
+    <div class="tab-content" id="tab-quotas">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Régime de quota applicable</div>
+        </div>
+        <div class="card-body">
+          <div class="quota-regimes-grid" id="quotaRegimeSelector"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Calcul des quotas français</div>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:24px">Heures d'écoute significative :<br>• Lun-Ven : 6h00-22h30<br>• Samedi : 6h30-22h30<br>• Dimanche : 7h00-22h30</p>
+          
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Total titres FR</div>
+              <div class="stat-value" id="totalFrenchTitles">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Appels FR/semaine</div>
+              <div class="stat-value" id="totalFrenchCalls">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Appels FR (heures légales)</div>
+              <div class="stat-value" id="frenchCallsPeakHours">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Quota atteint</div>
+              <div class="stat-value" id="frenchQuotaPercent" style="font-size:36px">0%</div>
+            </div>
+          </div>
+
+          <div style="margin:32px 0">
+            <label style="display:block;margin-bottom:12px;font-size:14px">Conformité légale — Quota francophone (heures d'écoute significative)</label>
+            <div style="position:relative;height:60px;background:var(--surface-light);border-radius:12px;overflow:hidden;border:2px solid var(--border)">
+              <div id="quotaGauge" style="height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981);transition:width 0.6s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;color:#fff;font-weight:800;font-size:20px;min-width:60px"></div>
+              <div id="quotaMarkers" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+            </div>
+            <div id="quotaStatus" style="margin-top:16px;padding:16px;border-radius:10px;font-weight:600;text-align:center"></div>
+          </div>
+
+          <div style="margin:32px 0">
+            <label style="display:block;margin-bottom:12px;font-size:14px">Sous-quota — Nouveaux talents / nouvelles productions</label>
+            <div class="stats" style="margin-bottom:16px">
+              <div class="stat">
+                <div class="stat-label">Titres nouveaux talents</div>
+                <div class="stat-value" id="totalNewTalentTitles">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Appels NT (heures légales)</div>
+                <div class="stat-value" id="newTalentCallsPeak">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Sous-quota atteint</div>
+                <div class="stat-value" id="sousQuotaPercent" style="font-size:36px">0%</div>
+              </div>
+            </div>
+            <div style="position:relative;height:60px;background:var(--surface-light);border-radius:12px;overflow:hidden;border:2px solid var(--border)">
+              <div id="sousQuotaGauge" style="height:100%;background:linear-gradient(90deg,#ef4444,#f59e0b,#8b5cf6);transition:width 0.6s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:16px;color:#fff;font-weight:800;font-size:20px;min-width:60px"></div>
+              <div id="sousQuotaMarkers" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+            </div>
+            <div id="sousQuotaStatus" style="margin-top:16px;padding:16px;border-radius:10px;font-weight:600;text-align:center"></div>
+          </div>
+
+          <div class="card" style="background:var(--bg);margin-top:24px">
+            <div class="card-header" style="background:var(--surface)">
+              <div class="card-title">Quota par jour</div>
+            </div>
+            <div class="card-body">
+              <p style="color:var(--text-muted);margin-bottom:16px">Détail du quota francophone pour chaque jour de la semaine (heures significatives uniquement)</p>
+              <div id="dailyQuotaContainer"></div>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--bg);margin-top:24px">
+            <div class="card-header" style="background:var(--surface)">
+              <div class="card-title">Détail par catégorie</div>
+            </div>
+            <div class="card-body">
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr><th>Catégorie</th><th>Titres FR</th><th>Appels FR/semaine</th><th>Appels FR (heures légales)</th><th>% de la catégorie</th></tr>
+                  </thead>
+                  <tbody id="frenchQuotaTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:24px">
+            <div class="chart-container" style="height:350px">
+              <canvas id="frenchQuotaChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Répartition horaire -->
+    <div class="tab-content" id="tab-hourly">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Répartition des appels par heure</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="hourlyChart"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Distribution par catégorie</div></div>
+        <div class="card-body"><div class="chart-container" style="height:300px"><canvas id="pieChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- TAB: Vue hebdomadaire -->
+    <div class="tab-content" id="tab-weekly">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Simulation hebdomadaire</div></div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Applique tes règles sur une semaine complète</p>
+          <div class="week-selector" id="weekSelector"></div>
+          <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+          <div style="margin-top:24px">
+            <h3 style="margin-bottom:12px">Totaux hebdomadaires</h3>
+            <div class="stats" id="weeklyStats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Heatmap -->
+    <div class="tab-content" id="tab-heatmap">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Heatmap de densité (semaine)</div></div>
+        <div class="card-body">
+          <p style="color:var(--text-muted);margin-bottom:16px">Intensité des appels par heure et par jour</p>
+          <div id="heatmapContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Spinclock V3.1.1 — <a href="https://martialdem.fr" target="_blank" style="color:var(--accent-light);text-decoration:none">MartialDem</a></div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <strong>Journal des modifications</strong>
+        <button class="btn btn-secondary btn-sm" id="closeModal">Fermer</button>
+      </div>
+      <div class="modal-body">
+        <ul>
+          <li><strong>V3.1.1</strong> — Couleurs distinctes par horloge dans la grille d'affectation et le modal d'assignation. Seuils de sur-rotation ajustés : critique à 12x/jour, modérée à 8x/jour. Renommage « Passages titre/jour » dans les résultats.</li>
+          <li><strong>V3.1.0</strong> — Sous-quota nouveaux talents avec jauge dédiée. Simplification du modèle de calcul : chaque élément de séquence = 1 passage (suppression de Positions/heure). Règles de séparation par catégorie avec alertes. Duplication d'horloges. Réordonnancement drag-and-drop dans les séquences. Vue quota francophone par jour. Détection de sur-rotation (burnout). Correction du prorata des heures frontières (22h-22h30, samedi 6h-6h30). Correction du comptage des catégories en doublon dans les quotas et la vue hebdomadaire. Intervalle basé sur heures/jour réel. Marqueurs de jauge dynamiques selon le régime.</li>
+          <li><strong>V3.0.3</strong> — Affectation rapide d'horloges (toute la grille ou par jour), correction du bug de scroll lors de la saisie, actualisation des quotas lors du changement de régime, réduction de la hauteur des cartes de régimes.</li>
+          <li><strong>V3.0.2</strong> — Onglet renommé en "Horloge", compteur de titres par horloge, système d'accordion pour réduire/étendre les horloges.</li>
+          <li><strong>V3.0.1</strong> — Corrections : calculs fonctionnels sans horloges assignées, modal d'affectation corrigé, presets complets, régimes de quotas en grille, suppression du mot de passe.</li>
+          <li><strong>V3.0.0</strong> — Module Horloges programmées avec grille d'affectation 7j×24h. Régimes de quotas français détaillés.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="assignModal">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <strong id="assignModalTitle">Assigner une horloge</strong>
+        <button class="btn btn-secondary btn-sm" onclick="closeAssignModal()">Fermer</button>
+      </div>
+      <div class="modal-body" id="assignModalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const q=s=>document.querySelector(s);
+      const qq=s=>Array.from(document.querySelectorAll(s));
+      
+      function pad2(n){return String(n).padStart(2,'0')}
+      function minutesToHHMM(x){if(!isFinite(x)||x<=0)return'—';const m=Math.round(x);const h=Math.floor(m/60);return h+'h'+String(m%60).padStart(2,'0')}
+      function round(x,d=2){if(!isFinite(x))return 0;const p=Math.pow(10,d);return Math.round(x*p)/p}
+      function firstLetterCode(code){return(code||'').toString().trim().charAt(0).toUpperCase()}
+      function getCategoryColor(code){const fl=firstLetterCode(code);const colorMap={'A':'#ef4444','B':'#3b82f6','C':'#f59e0b','D':'#ec4899','E':'#8b5cf6','F':'#06b6d4','G':'#10b981','H':'#f97316','I':'#14b8a6','J':'#84cc16','K':'#64748b','L':'#0ea5e9','M':'#22c55e','N':'#eab308','O':'#d946ef','P':'#6366f1','Q':'#0891b2','R':'#ea580c','S':'#2563eb','T':'#059669','U':'#c026d3','V':'#7c3aed','W':'#65a30d','X':'#dc2626','Y':'#ca8a04','Z':'#0d9488'};return colorMap[fl]||'#64748b'}
+      function generateId(){return 'id-'+Date.now()+'-'+Math.random().toString(36).substr(2,9)}
+      
+      const QUOTA_REGIMES = {
+        general: {
+          name: 'Régime général',
+          description: 'Radios généralistes',
+          quotaTotal: 40,
+          sousQuota: 20,
+          sousQuotaDesc: 'nouveaux talents/prod.',
+          examples: ''
+        },
+        jeunes: {
+          name: 'Jeunes talents',
+          description: 'Format jeune',
+          quotaTotal: 35,
+          sousQuota: 25,
+          sousQuotaDesc: 'nouveaux talents',
+          examples: ''
+        },
+        decouverte: {
+          name: 'Découverte',
+          description: 'Radios thématiques',
+          quotaTotal: 15,
+          sousQuota: 15,
+          sousQuotaDesc: 'nouveaux talents/prod.',
+          examples: ''
+        },
+        custom: {
+          name: 'Personnalisé',
+          description: 'Quota spécifique',
+          quotaTotal: null,
+          sousQuota: null,
+          sousQuotaDesc: '',
+          examples: ''
+        }
+      };
+      
+      const state={
+        hoursPerDay:24,
+        categories:[],
+        clocks:[],
+        clockGrid:{},
+        frenchQuota:{
+          regime:'general',
+          customPercent:40
+        }
+      };
+      const STORAGE_KEY='rotations-sim-v3-1-0';
+
+      const CLOCK_COLORS=[
+        {bg:'linear-gradient(135deg,#3b82f6,#1d4ed8)',border:'#3b82f6',glow:'rgba(59,130,246,0.3)'},
+        {bg:'linear-gradient(135deg,#10b981,#047857)',border:'#10b981',glow:'rgba(16,185,129,0.3)'},
+        {bg:'linear-gradient(135deg,#f59e0b,#d97706)',border:'#f59e0b',glow:'rgba(245,158,11,0.3)'},
+        {bg:'linear-gradient(135deg,#ef4444,#b91c1c)',border:'#ef4444',glow:'rgba(239,68,68,0.3)'},
+        {bg:'linear-gradient(135deg,#8b5cf6,#6d28d9)',border:'#8b5cf6',glow:'rgba(139,92,246,0.3)'},
+        {bg:'linear-gradient(135deg,#ec4899,#be185d)',border:'#ec4899',glow:'rgba(236,72,153,0.3)'},
+        {bg:'linear-gradient(135deg,#06b6d4,#0e7490)',border:'#06b6d4',glow:'rgba(6,182,212,0.3)'},
+        {bg:'linear-gradient(135deg,#f97316,#c2410c)',border:'#f97316',glow:'rgba(249,115,22,0.3)'},
+        {bg:'linear-gradient(135deg,#84cc16,#4d7c0f)',border:'#84cc16',glow:'rgba(132,204,22,0.3)'},
+        {bg:'linear-gradient(135deg,#d946ef,#a21caf)',border:'#d946ef',glow:'rgba(217,70,239,0.3)'},
+        {bg:'linear-gradient(135deg,#14b8a6,#0f766e)',border:'#14b8a6',glow:'rgba(20,184,166,0.3)'},
+        {bg:'linear-gradient(135deg,#6366f1,#4338ca)',border:'#6366f1',glow:'rgba(99,102,241,0.3)'}
+      ];
+      function getClockColor(clockId){
+        const idx=state.clocks.findIndex(c=>c.id===clockId);
+        return CLOCK_COLORS[idx%CLOCK_COLORS.length]||CLOCK_COLORS[0];
+      }
+
+      function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+      function load(){
+        const s=localStorage.getItem(STORAGE_KEY);
+        if(s){
+          try{
+            const obj=JSON.parse(s);
+            if(!obj.clocks)obj.clocks=[];
+            if(!obj.clockGrid)obj.clockGrid={};
+            if(obj.clocks){obj.clocks.forEach(c=>{delete c.maxPositions})}
+            delete obj.maxPositions;
+            if(!obj.frenchQuota){
+              obj.frenchQuota={regime:'general',customPercent:40};
+            }
+            if(obj.categories){obj.categories.forEach(c=>{if(c.newTalentTitles===undefined)c.newTalentTitles=0;if(c.minSeparation===undefined)c.minSeparation=0})}
+            Object.assign(state,obj);
+          }catch(e){}
+        }
+      }
+      
+      function renderCategories(preserveScroll=true){
+        const container=q('#categoriesContainer');
+        const scrollY=window.scrollY;
+        const activeElement=document.activeElement;
+        const activeField=activeElement?.dataset?.field;
+        const activeCat=activeElement?.dataset?.cat;
+
+        container.innerHTML='';
+        if(state.categories.length===0){
+          container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Aucune catégorie. Cliquez sur "+ Ajouter" ou sur un preset</p>';
+          q('#sumTitles').textContent='0';
+          return;
+        }
+        state.categories.forEach((cat,catIdx)=>{
+          const catCard=document.createElement('div');
+          catCard.className='category-card';
+          const fl=firstLetterCode(cat.code);
+          const cls=fl?('cat-'+fl):'cat-neutral';
+          catCard.innerHTML=`
+            <div class="category-header">
+              <span class="pill ${cls}">${cat.code||'—'}</span>
+              <button class="btn btn-danger btn-sm" data-delete-cat="${catIdx}">Supprimer</button>
+            </div>
+            <div class="grid grid-3" style="margin-bottom:8px">
+              <div><label>Code catégorie</label><input type="text" value="${cat.code||''}" data-cat="${catIdx}" data-field="code" placeholder="Ex: A, B, P..."></div>
+              <div><label>Nombre de titres</label><input type="number" min="0" step="1" value="${cat.titles||0}" data-cat="${catIdx}" data-field="titles"></div>
+              <div><label>Couleur</label><div class="pill ${cls}" style="width:100%;cursor:default">${cat.code||'—'}</div></div>
+            </div>
+            <div class="grid grid-3" style="margin-bottom:16px">
+              <div><label>Titres FR</label><input type="number" min="0" step="1" value="${cat.frenchTitles||0}" data-cat="${catIdx}" data-field="frenchTitles" placeholder="Nb FR"></div>
+              <div><label>Nouveaux talents</label><input type="number" min="0" step="1" value="${cat.newTalentTitles||0}" data-cat="${catIdx}" data-field="newTalentTitles" placeholder="Nb NT"></div>
+              <div><label>Séparation min (min)</label><input type="number" min="0" step="5" value="${cat.minSeparation||0}" data-cat="${catIdx}" data-field="minSeparation" placeholder="Ex: 90"></div>
+            </div>`;
+          container.appendChild(catCard);
+          catCard.querySelectorAll('input[data-field]').forEach(inp=>{inp.addEventListener('input',()=>{const idx=Number(inp.dataset.cat);const field=inp.dataset.field;let val=inp.value;if(field==='titles'||field==='frenchTitles'||field==='newTalentTitles'||field==='minSeparation')val=Number(val||0);if(field==='frenchTitles'&&val>state.categories[idx].titles)val=state.categories[idx].titles;if(field==='newTalentTitles'&&val>(state.categories[idx].frenchTitles||0))val=state.categories[idx].frenchTitles||0;state.categories[idx][field]=val;save();compute();if(field==='code'){renderCategories();renderClocks();}renderResults()})});
+          catCard.querySelector('[data-delete-cat]').addEventListener('click',()=>{state.categories.splice(catIdx,1);save();compute();renderCategories(false);renderResults();renderClocks()});
+        });
+        q('#sumTitles').textContent=state.categories.reduce((a,b)=>a+(Number(b.titles)||0),0);
+
+        if(preserveScroll){
+          requestAnimationFrame(()=>{
+            window.scrollTo(0,scrollY);
+            if(activeField&&activeCat){
+              const inputToFocus=container.querySelector(`input[data-cat="${activeCat}"][data-field="${activeField}"]`);
+              if(inputToFocus){
+                inputToFocus.focus();
+                if(inputToFocus.type==='text'){
+                  const len=inputToFocus.value.length;
+                  inputToFocus.setSelectionRange(len,len);
+                }
+              }
+            }
+          });
+        }
+      }
+      
+      function renderClocks(){
+        const container=q('#clocksContainer');
+        container.innerHTML='';
+        if(state.clocks.length===0){
+          container.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Aucune horloge créée. Cliquez sur "+ Créer une horloge"</p>';
+          return;
+        }
+        state.clocks.forEach((clock,idx)=>{
+          if(clock.collapsed===undefined)clock.collapsed=false;
+          const titleCount=clock.sequence.length;
+          const clockCard=document.createElement('div');
+          clockCard.className='clock-card'+(clock.collapsed?' collapsed':'');
+          clockCard.innerHTML=`
+            <div class="clock-card-header">
+              <div class="clock-card-header-left">
+                <input type="text" value="${clock.name||''}" placeholder="Nom de l'horloge" data-clock-name="${idx}" style="font-size:16px;font-weight:700;border:none;background:transparent;color:var(--text);padding:4px 8px;border-bottom:2px solid var(--border);width:300px">
+                <div class="clock-counter">${titleCount} titre${titleCount>1?'s':''}</div>
+                <button class="clock-toggle" data-toggle-clock="${idx}">${clock.collapsed?'▶ Afficher':'▼ Réduire'}</button>
+              </div>
+              <div class="clock-card-header-right">
+                <button class="btn btn-secondary btn-sm" data-duplicate-clock="${idx}">Dupliquer</button>
+                <button class="btn btn-danger btn-sm" data-delete-clock="${idx}">Supprimer</button>
+              </div>
+            </div>
+            <div class="clock-body${clock.collapsed?' collapsed':''}" data-clock-body="${idx}">
+            <div>
+              <label style="margin-bottom:8px">Séquence des catégories (glisser-déposer)</label>
+              <div class="clock-sequence" data-sequence="${idx}" data-drop-zone="true">
+                ${clock.sequence.length===0?'<div class="clock-empty">Glissez des catégories ici pour créer votre séquence</div>':''}
+                ${clock.sequence.map((catCode,seqIdx)=>{
+                  const fl=firstLetterCode(catCode);
+                  const cls=fl?('cat-'+fl):'cat-neutral';
+                  return `<div class="sequence-item" draggable="true" data-seq-idx="${seqIdx}"><span class="pill ${cls}">${catCode}</span><span class="remove-seq" data-remove-seq="${idx}-${seqIdx}">✕</span></div>`;
+                }).join('')}
+              </div>
+            </div>
+            <div>
+              <label style="margin-top:16px;margin-bottom:8px">Catégories disponibles</label>
+              <div class="available-cats">
+                ${state.categories.map(cat=>{
+                  const fl=firstLetterCode(cat.code);
+                  const cls=fl?('cat-'+fl):'cat-neutral';
+                  return `<span class="pill ${cls} draggable-cat" draggable="true" data-cat-code="${cat.code}">${cat.code}</span>`;
+                }).join('')}
+              </div>
+            </div>
+            </div>`;
+          container.appendChild(clockCard);
+          
+          clockCard.querySelector('[data-clock-name]').addEventListener('input',e=>{
+            state.clocks[idx].name=e.target.value;
+            save();
+          });
+
+          clockCard.querySelector('[data-delete-clock]').addEventListener('click',()=>{
+            state.clocks.splice(idx,1);
+            save();
+            renderClocks();
+            renderGrid();
+          });
+
+          clockCard.querySelector('[data-toggle-clock]').addEventListener('click',()=>{
+            state.clocks[idx].collapsed=!state.clocks[idx].collapsed;
+            save();
+            renderClocks();
+          });
+
+          clockCard.querySelector('[data-duplicate-clock]').addEventListener('click',()=>{
+            const clone={id:generateId(),name:(clock.name||'Horloge')+' (copie)',sequence:[...clock.sequence],collapsed:false};
+            state.clocks.splice(idx+1,0,clone);
+            save();
+            renderClocks();
+            renderGrid();
+          });
+
+          clockCard.querySelectorAll('.draggable-cat').forEach(el=>{
+            el.addEventListener('dragstart',e=>{
+              e.dataTransfer.effectAllowed='copy';
+              e.dataTransfer.setData('text/plain',el.dataset.catCode);
+            });
+          });
+          
+          // Drag-and-drop reorder within sequence
+          clockCard.querySelectorAll('.sequence-item').forEach(item=>{
+            item.addEventListener('dragstart',e=>{
+              e.dataTransfer.effectAllowed='move';
+              e.dataTransfer.setData('application/seq-reorder',JSON.stringify({clockIdx:idx,seqIdx:Number(item.dataset.seqIdx)}));
+            });
+          });
+
+          const seqZone=clockCard.querySelector('[data-sequence]');
+          seqZone.addEventListener('dragover',e=>{
+            e.preventDefault();
+            const hasReorder=e.dataTransfer.types.includes('application/seq-reorder');
+            e.dataTransfer.dropEffect=hasReorder?'move':'copy';
+          });
+          seqZone.addEventListener('drop',e=>{
+            e.preventDefault();
+            const reorderData=e.dataTransfer.getData('application/seq-reorder');
+            if(reorderData){
+              const{clockIdx:srcClock,seqIdx:srcIdx}=JSON.parse(reorderData);
+              if(srcClock===idx){
+                let targetIdx=clock.sequence.length-1;
+                const rect=seqZone.getBoundingClientRect();
+                const items=seqZone.querySelectorAll('.sequence-item');
+                items.forEach((el,i)=>{const r=el.getBoundingClientRect();if(e.clientX>r.left+r.width/2)targetIdx=i});
+                const item=state.clocks[idx].sequence.splice(srcIdx,1)[0];
+                const insertAt=targetIdx>=srcIdx?targetIdx:targetIdx+1;
+                state.clocks[idx].sequence.splice(insertAt,0,item);
+                save();renderClocks();compute();renderResults();
+              }
+              return;
+            }
+            const catCode=e.dataTransfer.getData('text/plain');
+            if(catCode){
+              state.clocks[idx].sequence.push(catCode);
+              save();
+              renderClocks();
+              compute();
+              renderResults();
+            }
+          });
+          
+          clockCard.querySelectorAll('[data-remove-seq]').forEach(btn=>{
+            btn.addEventListener('click',()=>{
+              const[clockIdx,seqIdx]=btn.dataset.removeSeq.split('-').map(Number);
+              state.clocks[clockIdx].sequence.splice(seqIdx,1);
+              save();
+              renderClocks();
+              compute();
+              renderResults();
+            });
+          });
+        });
+        updateQuickClockSelector();
+      }
+
+      function updateQuickClockSelector(){
+        const selector=q('#quickClockSelector');
+        if(!selector)return;
+        selector.innerHTML='<option value="">-- Sélectionner une horloge --</option>';
+        state.clocks.forEach(clock=>{
+          const option=document.createElement('option');
+          option.value=clock.id;
+          option.textContent=clock.name||'Sans nom';
+          selector.appendChild(option);
+        });
+      }
+
+      function assignClockToDay(clockId,day){
+        if(!clockId){
+          alert('Veuillez sélectionner une horloge');
+          return;
+        }
+        for(let h=0;h<24;h++){
+          const key=`${day}-${h}`;
+          state.clockGrid[key]=clockId;
+        }
+        save();
+        renderGrid();
+        compute();
+        renderResults();
+      }
+
+      function assignClockToAll(clockId){
+        if(!clockId){
+          alert('Veuillez sélectionner une horloge');
+          return;
+        }
+        if(!confirm('Affecter cette horloge à toute la grille (7 jours × 24 heures) ?')){
+          return;
+        }
+        for(let day=0;day<7;day++){
+          for(let h=0;h<24;h++){
+            const key=`${day}-${h}`;
+            state.clockGrid[key]=clockId;
+          }
+        }
+        save();
+        renderGrid();
+        compute();
+        renderResults();
+      }
+
+      function renderGrid(){
+        const container=q('#gridSchedule');
+        const days=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+        container.innerHTML='';
+        container.className='grid-schedule';
+
+        // Build complete HTML string
+        let html='<div class="grid-header">Jour / Heure</div>';
+        for(let h=0;h<24;h++){
+          html+=`<div class="grid-hour-label">${pad2(h)}h</div>`;
+        }
+
+        for(let day=0;day<7;day++){
+          html+=`<div class="grid-day-label">${days[day]}</div>`;
+          for(let hour=0;hour<24;hour++){
+            const key=`${day}-${hour}`;
+            const clockId=state.clockGrid[key];
+            const clock=state.clocks.find(c=>c.id===clockId);
+            const assigned=!!clock;
+            const label=clock?clock.name.substring(0,8):'';
+            let cellStyle='';
+            if(assigned){
+              const color=getClockColor(clockId);
+              cellStyle=` style="background:${color.bg};border-color:${color.border};box-shadow:0 2px 8px ${color.glow}"`;
+            }
+            html+=`<div class="grid-cell${assigned?' assigned':''}"${cellStyle} data-day="${day}" data-hour="${hour}">${label}</div>`;
+          }
+        }
+
+        container.innerHTML=html;
+
+        // Attach event listeners after DOM is ready
+        container.querySelectorAll('.grid-cell').forEach(cell=>{
+          const day=parseInt(cell.dataset.day);
+          const hour=parseInt(cell.dataset.hour);
+          cell.addEventListener('click',()=>openAssignModal(day,hour));
+        });
+      }
+      
+      window.openAssignModal=function(day,hour){
+        const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        const modal=q('#assignModal');
+        const title=q('#assignModalTitle');
+        const body=q('#assignModalBody');
+
+        if(!modal){
+          console.error('ERREUR: Le modal #assignModal n\'existe pas dans le DOM!');
+          return;
+        }
+
+        title.textContent=`Assigner une horloge — ${days[day]} ${pad2(hour)}h-${pad2((hour+1)%24)}h`;
+
+        if(state.clocks.length===0){
+          body.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Aucune horloge créée. Créez d\'abord une horloge dans l\'onglet ci-dessus.</p>';
+        }else{
+          body.innerHTML=`
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-secondary" onclick="assignClock(${day},${hour},null)">Aucune (effacer)</button>
+              ${state.clocks.map(c=>{const col=getClockColor(c.id);return `<button class="btn" style="background:${col.bg};color:#fff;border:1px solid ${col.border};box-shadow:0 2px 8px ${col.glow}" onclick="assignClock(${day},${hour},'${c.id}')">${c.name||'Sans nom'}</button>`}).join('')}
+            </div>`;
+        }
+
+        modal.classList.add('show');
+      };
+      
+      window.closeAssignModal=function(){
+        q('#assignModal').classList.remove('show');
+      };
+      
+      window.assignClock=function(day,hour,clockId){
+        const key=`${day}-${hour}`;
+        if(clockId===null){
+          delete state.clockGrid[key];
+        }else{
+          state.clockGrid[key]=clockId;
+        }
+        save();
+        renderGrid();
+        compute();
+        renderResults();
+        closeAssignModal();
+      };
+      
+      function renderQuotaRegimes(){
+        const container=q('#quotaRegimeSelector');
+        container.innerHTML='';
+        Object.entries(QUOTA_REGIMES).forEach(([key,regime])=>{
+          const div=document.createElement('div');
+          div.className='quota-regime'+(state.frenchQuota.regime===key?' selected':'');
+          div.innerHTML=`
+            <div class="quota-regime-header">
+              <input type="radio" name="quota-regime" value="${key}" ${state.frenchQuota.regime===key?'checked':''} class="quota-regime-radio">
+              <div class="quota-regime-name">${regime.name}${regime.quotaTotal?` (${regime.quotaTotal}%)`:''}</div>
+              ${key==='custom'?`<input type="number" min="0" max="100" value="${state.frenchQuota.customPercent}" id="customQuotaInput" style="max-width:70px;margin-left:auto;font-size:14px;font-weight:700" onclick="event.stopPropagation()"><span style="font-size:13px;color:var(--text-muted)">%</span>`:''}
+            </div>
+            <div class="quota-regime-desc">${regime.description}</div>
+            ${regime.sousQuota?`<div class="quota-regime-details">→ ${regime.sousQuota}% ${regime.sousQuotaDesc}</div>`:''}
+            ${regime.examples?`<div class="quota-regime-examples">${regime.examples}</div>`:''}`;
+          container.appendChild(div);
+          
+          div.addEventListener('click',()=>{
+            state.frenchQuota.regime=key;
+            save();
+            renderQuotaRegimes();
+            compute();
+            renderResults();
+            renderFrenchQuotas();
+          });
+        });
+        
+        if(q('#customQuotaInput')){
+          q('#customQuotaInput').addEventListener('input',e=>{
+            e.stopPropagation();
+            state.frenchQuota.customPercent=Number(e.target.value)||0;
+            save();
+            compute();
+            renderResults();
+            renderFrenchQuotas();
+          });
+        }
+      }
+      
+      let computed={perCat:[],sumCalls:0,globalInterval:'—',alerts:[],hourlyData:[],frenchQuotas:{totalFrenchTitles:0,totalFrenchCalls:0,frenchCallsPeakHours:0,totalCallsPeakHours:0,percentPeakHours:0,perCat:[],sousQuota:{totalNewTalentTitles:0,newTalentCallsPeak:0,totalCallsPeak:0,percentPeakHours:0},dailyQuotas:[]},burnoutAlerts:[],separationAlerts:[]};
+      
+      function compute(){
+        const hours=Number(q('#hoursPerDay').value||24);
+        state.hoursPerDay=hours;
+        const alerts=[];
+        const burnoutAlerts=[];
+        const separationAlerts=[];
+        const hourlyData=[];
+
+        for(let h=0;h<hours;h++){
+          const hourData={hour:h,categories:{},totalUsed:0};
+          hourlyData.push(hourData);
+        }
+
+        const hasAnyAssignment=Object.keys(state.clockGrid).length>0;
+        if(!hasAnyAssignment&&state.clocks.length>0){
+          alerts.push({cat:'Système',message:'Vous avez créé des horloges mais aucune n\'est assignée dans la grille. Assignez vos horloges aux créneaux jour/heure pour voir les calculs.'});
+        }
+
+        for(let day=0;day<7;day++){
+          for(let hour=0;hour<hours;hour++){
+            const key=`${day}-${hour}`;
+            const clockId=state.clockGrid[key];
+            const clock=state.clocks.find(c=>c.id===clockId);
+
+            if(clock&&clock.sequence.length>0){
+              clock.sequence.forEach(catCode=>{
+                if(!hourlyData[hour].categories[catCode])hourlyData[hour].categories[catCode]=0;
+                hourlyData[hour].categories[catCode]+=1/7;
+              });
+            }
+          }
+        }
+
+        const perCat=state.categories.map(cat=>{
+          let totalCallsPerDay=0;
+          for(let h=0;h<hours;h++){
+            totalCallsPerDay+=(hourlyData[h].categories[cat.code]||0);
+          }
+          const maxPossibleCalls=cat.titles*hours;
+          if(totalCallsPerDay>maxPossibleCalls&&cat.titles>0){
+            const deficit=totalCallsPerDay-maxPossibleCalls;
+            alerts.push({cat:cat.code||'Sans code',message:`Quota impossible : ${round(totalCallsPerDay,1)} appels demandés mais seulement ${maxPossibleCalls} possibles (${cat.titles} titres × ${hours}h). Déficit : ${round(deficit,1)} appels.`});
+          }
+          const callsPerHourAvg=hours>0?totalCallsPerDay/hours:0;
+          const passesPerTitlePerDay=cat.titles>0?totalCallsPerDay/cat.titles:0;
+          const intervalMin=passesPerTitlePerDay>0?(60*hours)/passesPerTitlePerDay:0;
+
+          // F7: Burnout detection
+          if(cat.titles>0&&passesPerTitlePerDay>0){
+            const rotationDays=cat.titles>0?cat.titles/passesPerTitlePerDay:0;
+            if(passesPerTitlePerDay>=13.5){
+              burnoutAlerts.push({code:cat.code,message:`Sur-rotation critique : chaque titre passe ${round(passesPerTitlePerDay,1)}x/jour. Risque d'usure rapide.`,level:'danger'});
+            }else if(passesPerTitlePerDay>=8){
+              burnoutAlerts.push({code:cat.code,message:`Sur-rotation modérée : chaque titre passe ${round(passesPerTitlePerDay,1)}x/jour.`,level:'warning'});
+            }
+          }
+
+          // F3: Separation check
+          if(cat.minSeparation>0&&intervalMin>0&&intervalMin<cat.minSeparation){
+            separationAlerts.push({code:cat.code,message:`Séparation insuffisante : intervalle calculé ${minutesToHHMM(intervalMin)} < minimum requis ${minutesToHHMM(cat.minSeparation)}. Il faudrait ${Math.ceil(cat.minSeparation*passesPerTitlePerDay/60/hours)} titres de plus ou réduire les appels.`});
+          }
+
+          return{code:cat.code,titles:cat.titles,totalCallsPerDay,callsPerHourAvg,passesPerTitlePerDay,intervalMin,minSeparation:cat.minSeparation||0};
+        });
+
+        const sumCalls=perCat.reduce((a,b)=>a+b.totalCallsPerDay,0);
+        const intervals=perCat.filter(r=>r.passesPerTitlePerDay>0).map(r=>r.intervalMin);
+        const globalInterval=intervals.length?minutesToHHMM(intervals.reduce((a,b)=>a+b,0)/intervals.length):'—';
+
+        // French quotas + sous-quota + daily quotas
+        const frenchQuotas={totalFrenchTitles:0,totalFrenchCalls:0,frenchCallsPeakHours:0,totalCallsPeakHours:0,percentPeakHours:0,perCat:[],sousQuota:{totalNewTalentTitles:0,newTalentCallsPeak:0,totalCallsPeak:0,percentPeakHours:0},dailyQuotas:[]};
+
+        // Per-day quota accumulators
+        const dailyFrench=Array.from({length:7},()=>({frenchCalls:0,totalCalls:0,ntCalls:0}));
+
+        state.categories.forEach(cat=>{
+          frenchQuotas.totalFrenchTitles+=(cat.frenchTitles||0);
+          frenchQuotas.sousQuota.totalNewTalentTitles+=(cat.newTalentTitles||0);
+          let catFrenchCallsTotal=0;
+          let catFrenchCallsPeak=0;
+          let catTotalCallsPeak=0;
+          let catNTCallsPeak=0;
+          const frenchRatio=(cat.titles>0&&cat.frenchTitles>0)?(cat.frenchTitles/cat.titles):0;
+          const ntRatio=(cat.titles>0&&cat.newTalentTitles>0)?(cat.newTalentTitles/cat.titles):0;
+
+          for(let day=0;day<7;day++){
+            let startHour,endHour;
+            if(day>=0&&day<=4){startHour=6;endHour=22.5}
+            else if(day===5){startHour=6.5;endHour=22.5}
+            else{startHour=7;endHour=22.5}
+
+            for(let h=0;h<hours;h++){
+              const key=`${day}-${h}`;
+              const clockId=state.clockGrid[key];
+              const clock=state.clocks.find(c=>c.id===clockId);
+
+              let callsThisHour=0;
+              if(clock){
+                clock.sequence.forEach(code=>{
+                  if(code===cat.code) callsThisHour++;
+                });
+              }
+
+              const frenchCallsThisHour=callsThisHour*frenchRatio;
+              const ntCallsThisHour=callsThisHour*ntRatio;
+              catFrenchCallsTotal+=frenchCallsThisHour;
+
+              const peakStart=Math.max(h,startHour);
+              const peakEnd=Math.min(h+1,endHour);
+              const peakWeight=Math.max(0,peakEnd-peakStart);
+              if(peakWeight>0){
+                catFrenchCallsPeak+=frenchCallsThisHour*peakWeight;
+                catTotalCallsPeak+=callsThisHour*peakWeight;
+                catNTCallsPeak+=ntCallsThisHour*peakWeight;
+                dailyFrench[day].frenchCalls+=frenchCallsThisHour*peakWeight;
+                dailyFrench[day].totalCalls+=callsThisHour*peakWeight;
+                dailyFrench[day].ntCalls+=ntCallsThisHour*peakWeight;
+              }
+            }
+          }
+
+          frenchQuotas.totalFrenchCalls+=catFrenchCallsTotal;
+          frenchQuotas.frenchCallsPeakHours+=catFrenchCallsPeak;
+          frenchQuotas.totalCallsPeakHours+=catTotalCallsPeak;
+          frenchQuotas.sousQuota.newTalentCallsPeak+=catNTCallsPeak;
+          frenchQuotas.sousQuota.totalCallsPeak+=catTotalCallsPeak;
+          frenchQuotas.perCat.push({code:cat.code,frenchTitles:cat.frenchTitles||0,newTalentTitles:cat.newTalentTitles||0,totalTitles:cat.titles||0,frenchCallsTotal:catFrenchCallsTotal,frenchCallsPeak:catFrenchCallsPeak,ntCallsPeak:catNTCallsPeak,percentOfCategory:cat.titles>0?((cat.frenchTitles||0)/cat.titles*100):0});
+        });
+        frenchQuotas.percentPeakHours=frenchQuotas.totalCallsPeakHours>0?(frenchQuotas.frenchCallsPeakHours/frenchQuotas.totalCallsPeakHours*100):0;
+        frenchQuotas.sousQuota.percentPeakHours=frenchQuotas.sousQuota.totalCallsPeak>0?(frenchQuotas.sousQuota.newTalentCallsPeak/frenchQuotas.sousQuota.totalCallsPeak*100):0;
+
+        // Daily quotas
+        const dayNames=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        frenchQuotas.dailyQuotas=dailyFrench.map((d,i)=>({day:dayNames[i],frenchPercent:d.totalCalls>0?(d.frenchCalls/d.totalCalls*100):0,ntPercent:d.totalCalls>0?(d.ntCalls/d.totalCalls*100):0,frenchCalls:d.frenchCalls,totalCalls:d.totalCalls,ntCalls:d.ntCalls}));
+
+        computed={perCat,sumCalls,globalInterval,alerts,hourlyData,frenchQuotas,burnoutAlerts,separationAlerts};
+      }
+      
+      function renderResults(){
+        q('#sumCalls').textContent=round(computed.sumCalls,2);
+        q('#globalInterval').textContent=computed.globalInterval;
+        
+        const quotaPercent=computed.frenchQuotas?.percentPeakHours||0;
+        const regime=QUOTA_REGIMES[state.frenchQuota.regime];
+        const target=regime.quotaTotal||state.frenchQuota.customPercent;
+        const homeQuota=q('#homeFrenchQuota');
+        if(homeQuota){
+          if(quotaPercent>0){
+            homeQuota.textContent=round(quotaPercent,1)+'%';
+            if(quotaPercent<target-5){homeQuota.style.color='#ef4444'}
+            else if(quotaPercent<target){homeQuota.style.color='#f59e0b'}
+            else{homeQuota.style.color='#10b981'}
+          }else{
+            homeQuota.textContent='—';
+            homeQuota.style.color='var(--text)';
+          }
+        }
+        
+        const alertsContainer=q('#alertsContainer');
+        let alertsHtml='';
+        const systemAlerts=computed.alerts.filter(a=>a.cat==='Système');
+        const otherAlerts=computed.alerts.filter(a=>a.cat!=='Système');
+        if(systemAlerts.length>0){
+          alertsHtml+=`<div class="alert-warning"><div class="alert-title">Configuration</div><ul class="alert-list">${systemAlerts.map(a=>`<li>${a.message}</li>`).join('')}</ul></div>`;
+        }
+        if(otherAlerts.length>0){
+          alertsHtml+=`<div class="alert"><div class="alert-title">Alertes rotation</div><ul class="alert-list">${otherAlerts.map(a=>`<li><strong>${a.cat}</strong> : ${a.message}</li>`).join('')}</ul></div>`;
+        }
+        if(computed.separationAlerts.length>0){
+          alertsHtml+=`<div class="alert"><div class="alert-title">Séparation insuffisante</div><ul class="alert-list">${computed.separationAlerts.map(a=>`<li><strong>${a.code}</strong> : ${a.message}</li>`).join('')}</ul></div>`;
+        }
+        if(computed.burnoutAlerts.length>0){
+          const dangers=computed.burnoutAlerts.filter(a=>a.level==='danger');
+          const warnings=computed.burnoutAlerts.filter(a=>a.level==='warning');
+          if(dangers.length>0){
+            alertsHtml+=`<div class="alert"><div class="alert-title">Sur-rotation critique</div><ul class="alert-list">${dangers.map(a=>`<li><strong>${a.code}</strong> : ${a.message}</li>`).join('')}</ul></div>`;
+          }
+          if(warnings.length>0){
+            alertsHtml+=`<div class="alert-warning"><div class="alert-title">Sur-rotation modérée</div><ul class="alert-list">${warnings.map(a=>`<li><strong>${a.code}</strong> : ${a.message}</li>`).join('')}</ul></div>`;
+          }
+        }
+        alertsContainer.innerHTML=alertsHtml;
+        
+        const tbody=q('#resultsTable tbody');
+        tbody.innerHTML='';
+        computed.perCat.forEach(r=>{
+          const tr=document.createElement('tr');
+          const fl=firstLetterCode(r.code);
+          const cls=fl?('cat-'+fl):'cat-neutral';
+          const label=r.code?r.code:'—';
+          const percent=computed.sumCalls>0?(r.totalCallsPerDay/computed.sumCalls*100):0;
+          tr.innerHTML=`<td><span class="pill ${cls}">${label}</span></td><td>${r.titles||0}</td><td>${round(r.totalCallsPerDay,2)}</td><td>${round(r.callsPerHourAvg,2)}</td><td>${round(r.passesPerTitlePerDay,2)}</td><td>${minutesToHHMM(r.intervalMin)}</td><td>${round(percent,1)}%</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+      
+      function renderFrenchQuotas(){
+        q('#totalFrenchTitles').textContent=computed.frenchQuotas.totalFrenchTitles;
+        q('#totalFrenchCalls').textContent=round(computed.frenchQuotas.totalFrenchCalls,1);
+        q('#frenchCallsPeakHours').textContent=round(computed.frenchQuotas.frenchCallsPeakHours,1);
+        const percent=computed.frenchQuotas.percentPeakHours;
+        q('#frenchQuotaPercent').textContent=round(percent,1)+'%';
+        
+        const regime=QUOTA_REGIMES[state.frenchQuota.regime];
+        const target=regime.quotaTotal||state.frenchQuota.customPercent;
+        
+        const gauge=q('#quotaGauge');
+        gauge.style.width=Math.min(100,percent)+'%';
+        gauge.textContent=round(percent,1)+'%';
+        
+        const markers=q('#quotaMarkers');
+        markers.innerHTML='';
+        const marks=new Set([25,50,75]);marks.add(target);if(regime.sousQuota)marks.add(regime.sousQuota);
+        Array.from(marks).sort((a,b)=>a-b).forEach(mark=>{
+          if(mark<=100){
+            const marker=document.createElement('div');
+            marker.style.cssText=`position:absolute;left:${mark}%;top:0;bottom:0;width:${mark===target?'3px':'2px'};background:${mark===target?'rgba(255,255,255,0.8)':'rgba(255,255,255,0.3)'}`;
+            markers.appendChild(marker);
+            const label=document.createElement('div');
+            label.style.cssText=`position:absolute;left:${mark}%;top:-24px;font-size:11px;color:var(--text-muted);transform:translateX(-50%);font-weight:${mark===target?'700':'400'}`;
+            label.textContent=mark+'%';
+            markers.appendChild(label);
+          }
+        });
+        
+        const status=q('#quotaStatus');
+        if(percent<target-5){
+          status.style.background='linear-gradient(135deg,rgba(239,68,68,0.2),rgba(220,38,38,0.1))';
+          status.style.border='1px solid rgba(239,68,68,0.3)';
+          status.style.color='#fca5a5';
+          status.innerHTML=`<strong>Non conforme</strong> — En dessous du seuil ${regime.name} (${target}%)`;
+        }else if(percent<target){
+          status.style.background='linear-gradient(135deg,rgba(245,158,11,0.2),rgba(217,119,6,0.1))';
+          status.style.border='1px solid rgba(245,158,11,0.3)';
+          status.style.color='#fcd34d';
+          status.innerHTML=`<strong>Attention</strong> — Proche du seuil minimum (${target}%)`;
+        }else{
+          status.style.background='linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1))';
+          status.style.border='1px solid rgba(16,185,129,0.3)';
+          status.style.color='#6ee7b7';
+          status.innerHTML=`<strong>Conforme</strong> — ${regime.name} respecté (≥${target}%)`;
+        }
+        
+        // Sous-quota gauge
+        const sousQuotaData=computed.frenchQuotas.sousQuota;
+        const sousTarget=regime.sousQuota||(state.frenchQuota.customPercent/2);
+        q('#totalNewTalentTitles').textContent=sousQuotaData.totalNewTalentTitles;
+        q('#newTalentCallsPeak').textContent=round(sousQuotaData.newTalentCallsPeak,1);
+        const sousPercent=sousQuotaData.percentPeakHours;
+        q('#sousQuotaPercent').textContent=round(sousPercent,1)+'%';
+
+        const sousGauge=q('#sousQuotaGauge');
+        sousGauge.style.width=Math.min(100,sousPercent)+'%';
+        sousGauge.textContent=round(sousPercent,1)+'%';
+
+        const sousMarkers=q('#sousQuotaMarkers');
+        sousMarkers.innerHTML='';
+        if(sousTarget){
+          const sm=document.createElement('div');
+          sm.style.cssText=`position:absolute;left:${sousTarget}%;top:0;bottom:0;width:3px;background:rgba(255,255,255,0.8)`;
+          sousMarkers.appendChild(sm);
+          const sl=document.createElement('div');
+          sl.style.cssText=`position:absolute;left:${sousTarget}%;top:-24px;font-size:11px;color:var(--text-muted);transform:translateX(-50%);font-weight:700`;
+          sl.textContent=sousTarget+'%';
+          sousMarkers.appendChild(sl);
+        }
+
+        const sousStatus=q('#sousQuotaStatus');
+        if(sousPercent<sousTarget-5){
+          sousStatus.style.background='linear-gradient(135deg,rgba(239,68,68,0.2),rgba(220,38,38,0.1))';
+          sousStatus.style.border='1px solid rgba(239,68,68,0.3)';
+          sousStatus.style.color='#fca5a5';
+          sousStatus.innerHTML=`<strong>Non conforme</strong> — Sous-quota nouveaux talents en dessous du seuil (${sousTarget}%)`;
+        }else if(sousPercent<sousTarget){
+          sousStatus.style.background='linear-gradient(135deg,rgba(245,158,11,0.2),rgba(217,119,6,0.1))';
+          sousStatus.style.border='1px solid rgba(245,158,11,0.3)';
+          sousStatus.style.color='#fcd34d';
+          sousStatus.innerHTML=`<strong>Attention</strong> — Sous-quota proche du minimum (${sousTarget}%)`;
+        }else{
+          sousStatus.style.background='linear-gradient(135deg,rgba(139,92,246,0.2),rgba(124,58,237,0.1))';
+          sousStatus.style.border='1px solid rgba(139,92,246,0.3)';
+          sousStatus.style.color='#c4b5fd';
+          sousStatus.innerHTML=`<strong>Conforme</strong> — Sous-quota nouveaux talents respecté (≥${sousTarget}%)`;
+        }
+
+        // Daily quotas (F6)
+        const dailyContainer=q('#dailyQuotaContainer');
+        if(dailyContainer){
+          const dq=computed.frenchQuotas.dailyQuotas;
+          let dhtml='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">';
+          dq.forEach(d=>{
+            const ok=d.frenchPercent>=target;
+            const ntOk=sousTarget?d.ntPercent>=sousTarget:true;
+            const borderColor=ok?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.4)';
+            const textColor=ok?'#6ee7b7':'#fca5a5';
+            dhtml+=`<div style="background:var(--bg-card);border:1px solid ${borderColor};border-radius:var(--radius-md);padding:16px;text-align:center">
+              <div style="font-weight:700;margin-bottom:8px">${d.day}</div>
+              <div style="font-size:24px;font-weight:800;color:${textColor}">${round(d.frenchPercent,1)}%</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">FR (${round(d.frenchCalls,0)} / ${round(d.totalCalls,0)})</div>
+              <div style="font-size:13px;color:${ntOk?'#c4b5fd':'#fcd34d'};margin-top:8px;font-weight:600">NT: ${round(d.ntPercent,1)}%</div>
+            </div>`;
+          });
+          dhtml+='</div>';
+          dailyContainer.innerHTML=dhtml;
+        }
+
+        const tbody=q('#frenchQuotaTable');
+        tbody.innerHTML='';
+        computed.frenchQuotas.perCat.forEach(r=>{
+          const fl=firstLetterCode(r.code);
+          const cls=fl?('cat-'+fl):'cat-neutral';
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td><span class="pill ${cls}">${r.code||'—'}</span></td><td>${r.frenchTitles}/${r.totalTitles}</td><td>${round(r.frenchCallsTotal,1)}</td><td>${round(r.frenchCallsPeak,1)}</td><td>${round(r.percentOfCategory,1)}%</td>`;
+          tbody.appendChild(tr);
+        });
+
+        const ctx=q('#frenchQuotaChart');
+        if(!ctx)return;
+        if(window.frenchQuotaChart)window.frenchQuotaChart.destroy();
+        const labels=Array.from({length:24},(_,i)=>`${pad2(i)}h`);
+        const frenchData=[];
+        const totalData=[];
+        for(let h=0;h<24;h++){
+          let totalFrench=0;
+          let totalAll=0;
+          state.categories.forEach(cat=>{
+            const frenchRatio=(cat.titles>0&&cat.frenchTitles>0)?(cat.frenchTitles/cat.titles):0;
+            const calls=(computed.hourlyData[h]?.categories[cat.code]||0)*7;
+            totalFrench+=calls*frenchRatio;
+            totalAll+=calls;
+          });
+          frenchData.push(totalFrench);
+          totalData.push(totalAll);
+        }
+        window.frenchQuotaChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Titres français',data:frenchData,backgroundColor:'#3b82f6',borderColor:'#2563eb',borderWidth:2},{label:'Titres internationaux',data:totalData.map((t,i)=>t-frenchData[i]),backgroundColor:'#64748b',borderColor:'#475569',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Répartition français/international par heure',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}}}}});
+      }
+      
+      let hourlyChart,pieChart,weeklyChart;
+      function renderHourlyChart(){
+        const ctx=q('#hourlyChart');
+        if(!ctx)return;
+        if(hourlyChart)hourlyChart.destroy();
+        const labels=Array.from({length:state.hoursPerDay},(_,i)=>`${pad2(i)}h`);
+        const datasets=state.categories.map(cat=>({
+          label:cat.code||'Sans code',
+          data:computed.hourlyData.map(h=>h.categories[cat.code]||0),
+          backgroundColor:getCategoryColor(cat.code),
+          borderColor:getCategoryColor(cat.code),
+          borderWidth:1
+        }));
+        hourlyChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Appels par heure et par catégorie',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}}}}});
+        
+        const pieCtx=q('#pieChart');
+        if(pieChart)pieChart.destroy();
+        const pieData=computed.perCat.map(r=>r.totalCallsPerDay);
+        const pieLabels=computed.perCat.map(r=>r.code||'Sans code');
+        const pieColors=computed.perCat.map(r=>getCategoryColor(r.code));
+        pieChart=new Chart(pieCtx,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors,borderWidth:2,borderColor:'#0a0a1a'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Distribution des appels par catégorie',color:'#f1f5f9',font:{size:16,weight:'bold'}}}}});
+      }
+      
+      function initWeekSelector(){
+        const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        const weekSelector=q('#weekSelector');
+        weekSelector.innerHTML=days.map((day,i)=>`<button class="day-btn active" data-day="${i}">${day}</button>`).join('');
+        weekSelector.querySelectorAll('.day-btn').forEach(btn=>{btn.addEventListener('click',()=>{btn.classList.toggle('active');updateWeeklyChart()})});
+      }
+      function updateWeeklyChart(){
+        const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+        const activeDays=Array.from(q('#weekSelector').querySelectorAll('.day-btn.active')).map(b=>Number(b.dataset.day));
+        
+        const ctx=q('#weeklyChart');
+        if(!ctx)return;
+        if(weeklyChart)weeklyChart.destroy();
+        const datasets=state.categories.map(cat=>{
+          const data=days.map((_,dayIdx)=>{
+            if(!activeDays.includes(dayIdx))return 0;
+            let total=0;
+            for(let h=0;h<state.hoursPerDay;h++){
+              const key=`${dayIdx}-${h}`;
+              const clockId=state.clockGrid[key];
+              const clock=state.clocks.find(c=>c.id===clockId);
+              if(clock){
+                clock.sequence.forEach(code=>{
+                  if(code===cat.code) total++;
+                });
+              }
+            }
+            return total;
+          });
+          return{label:cat.code||'Sans code',data:data,backgroundColor:getCategoryColor(cat.code),borderColor:getCategoryColor(cat.code),borderWidth:2};
+        });
+        weeklyChart=new Chart(ctx,{type:'bar',data:{labels:days,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#f1f5f9',font:{size:12}}},title:{display:true,text:'Simulation hebdomadaire',color:'#f1f5f9',font:{size:16,weight:'bold'}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}},y:{stacked:true,grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#94a3b8'}}}}});
+        
+        const weeklyStats=q('#weeklyStats');
+        let totalWeekCalls=0;
+        activeDays.forEach(dayIdx=>{
+          for(let h=0;h<state.hoursPerDay;h++){
+            const key=`${dayIdx}-${h}`;
+            const clockId=state.clockGrid[key];
+            const clock=state.clocks.find(c=>c.id===clockId);
+            if(clock){
+              totalWeekCalls+=clock.sequence.length;
+            }
+          }
+        });
+        weeklyStats.innerHTML=`<div class="stat"><div class="stat-label">Jours actifs</div><div class="stat-value">${activeDays.length}</div></div><div class="stat"><div class="stat-label">Total appels/semaine</div><div class="stat-value">${round(totalWeekCalls,0)}</div></div><div class="stat"><div class="stat-label">Moyenne/jour</div><div class="stat-value">${activeDays.length>0?round(totalWeekCalls/activeDays.length,0):0}</div></div>`;
+      }
+      
+      function renderHeatmap(){
+        const container=q('#heatmapContainer');
+        if(!container)return;
+        const days=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+        let maxCalls=0;
+        days.forEach((_,dayIdx)=>{
+          for(let h=0;h<24;h++){
+            const key=`${dayIdx}-${h}`;
+            const clockId=state.clockGrid[key];
+            const clock=state.clocks.find(c=>c.id===clockId);
+            if(clock){
+              if(clock.sequence.length>maxCalls)maxCalls=clock.sequence.length;
+            }
+          }
+        });
+        container.innerHTML='';
+        const header=document.createElement('div');
+        header.style.cssText='display:grid;grid-template-columns:60px repeat(24,1fr);gap:4px;margin-bottom:8px';
+        header.innerHTML='<div class="heatmap-label"></div>'+Array.from({length:24},(_,i)=>`<div class="heatmap-label">${i}</div>`).join('');
+        container.appendChild(header);
+        days.forEach((day,dayIdx)=>{
+          const row=document.createElement('div');
+          row.className='heatmap';
+          row.innerHTML=`<div class="heatmap-label">${day}</div>`;
+          for(let h=0;h<24;h++){
+            const key=`${dayIdx}-${h}`;
+            const clockId=state.clockGrid[key];
+            const clock=state.clocks.find(c=>c.id===clockId);
+            let total=0;
+            if(clock){
+              total=clock.sequence.length;
+            }
+            const intensity=maxCalls>0?total/maxCalls:0;
+            const hue=200-(intensity*80);
+            const sat=70+(intensity*30);
+            const light=50-(intensity*20);
+            const color=`hsl(${hue},${sat}%,${light}%)`;
+            const cell=document.createElement('div');
+            cell.className='heatmap-cell';
+            cell.style.background=color;
+            cell.style.color=intensity>0.5?'#fff':'#94a3b8';
+            cell.textContent=total>0?round(total,0):'';
+            cell.title=`${day} ${pad2(h)}h : ${round(total,1)} appels`;
+            row.appendChild(cell);
+          }
+          container.appendChild(row);
+        });
+      }
+      
+      qq('.tab').forEach(tab=>{tab.addEventListener('click',()=>{qq('.tab').forEach(t=>t.classList.remove('active'));qq('.tab-content').forEach(tc=>tc.classList.remove('active'));tab.classList.add('active');q(`#tab-${tab.dataset.tab}`).classList.add('active');const tabId=tab.dataset.tab;if(tabId==='clocks'){renderClocks();renderGrid()}if(tabId==='quotas'){renderQuotaRegimes();renderFrenchQuotas()}if(tabId==='hourly')renderHourlyChart();if(tabId==='weekly'){if(!q('#weekSelector').hasChildNodes())initWeekSelector();updateWeeklyChart()};if(tabId==='heatmap')renderHeatmap()})});
+      
+      q('#addCat').addEventListener('click',()=>{state.categories.push({code:'',titles:0,frenchTitles:0,newTalentTitles:0,minSeparation:0});save();renderCategories(false);compute();renderResults();renderClocks()});
+      q('#addClock').addEventListener('click',()=>{state.clocks.push({id:generateId(),name:'Nouvelle horloge',sequence:[]});save();renderClocks()});
+      q('#clearGrid').addEventListener('click',()=>{if(confirm('Effacer toute la grille d\'affectation ?')){state.clockGrid={};save();renderGrid();compute();renderResults()}});
+
+      q('#assignToAll').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToAll(clockId);
+      });
+      q('#assignToMonday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,0);
+      });
+      q('#assignToTuesday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,1);
+      });
+      q('#assignToWednesday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,2);
+      });
+      q('#assignToThursday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,3);
+      });
+      q('#assignToFriday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,4);
+      });
+      q('#assignToSaturday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,5);
+      });
+      q('#assignToSunday').addEventListener('click',()=>{
+        const clockId=q('#quickClockSelector').value;
+        assignClockToDay(clockId,6);
+      });
+
+      q('#presetRadioA').addEventListener('click',()=>{
+        state.categories=[
+          {code:'P',titles:3,frenchTitles:1,newTalentTitles:1,minSeparation:90},
+          {code:'A',titles:5,frenchTitles:2,newTalentTitles:1,minSeparation:120},
+          {code:'B',titles:9,frenchTitles:3,newTalentTitles:1,minSeparation:160},
+          {code:'C',titles:14,frenchTitles:5,newTalentTitles:2,minSeparation:250},
+          {code:'R',titles:55,frenchTitles:10,newTalentTitles:3,minSeparation:0},
+          {code:'G',titles:220,frenchTitles:78,newTalentTitles:0,minSeparation:0}
+        ];
+        state.clocks=[
+          {id:generateId(),name:'Matinale A',sequence:['P','A','B','P','A','G']},
+          {id:generateId(),name:'Matinale B',sequence:['A','B','P','C','R','P']},
+          {id:generateId(),name:'Journée A',sequence:['A','B','C','P','R','G','B','A','P','B','R','C','A','B']},
+          {id:generateId(),name:'Journée B',sequence:['B','C','R','C','A','B','R','G','C','A','P','B','R','C']},
+          {id:generateId(),name:'Drive A',sequence:['P','A','B','A','P','B']},
+          {id:generateId(),name:'Drive B',sequence:['A','C','B','P','B','A']},
+          {id:generateId(),name:'Soirée A',sequence:['P','C','R','B','A','G','C','R']},
+          {id:generateId(),name:'Soirée B',sequence:['A','B','G','R','C','P','B','R']},
+          {id:generateId(),name:'Nuit A',sequence:['A','B','C','P','R','G','B','A','P','B','R','C','A','B','G','A','C']},
+          {id:generateId(),name:'Nuit B',sequence:['P','B','G','C','A','B','R','G','C','A','P','B','G','C','R','B','G']},
+        ];
+        state.clockGrid={};
+        const ids=state.clocks.map(c=>c.id);
+        // ids: 0=MatA,1=MatB,2=JourA,3=JourB,4=DriveA,5=DriveB,6=SoirA,7=SoirB,8=NuitA,9=NuitB
+        for(let day=0;day<5;day++){
+          for(let h=0;h<24;h++){
+            const alt=(day+h)%2;
+            if(h>=6&&h<9)state.clockGrid[`${day}-${h}`]=ids[0+alt];
+            else if(h>=9&&h<16)state.clockGrid[`${day}-${h}`]=ids[2+alt];
+            else if(h>=16&&h<19)state.clockGrid[`${day}-${h}`]=ids[4+alt];
+            else if(h>=19&&h<22)state.clockGrid[`${day}-${h}`]=ids[6+alt];
+            else state.clockGrid[`${day}-${h}`]=ids[8+alt];
+          }
+        }
+        for(let day=5;day<7;day++){
+          for(let h=0;h<24;h++){
+            const alt=(day+h)%2;
+            if(h>=8&&h<19)state.clockGrid[`${day}-${h}`]=ids[2+alt];
+            else if(h>=19&&h<22)state.clockGrid[`${day}-${h}`]=ids[6+alt];
+            else state.clockGrid[`${day}-${h}`]=ids[8+alt];
+          }
+        }
+        save();renderCategories(false);renderClocks();renderGrid();compute();renderResults()
+      });
+
+      q('#presetRadioB').addEventListener('click',()=>{
+        state.categories=[{code:'Hits',titles:40,frenchTitles:25,newTalentTitles:10,minSeparation:60},{code:'Pop',titles:50,frenchTitles:30,newTalentTitles:12,minSeparation:45},{code:'Rock',titles:35,frenchTitles:15,newTalentTitles:5,minSeparation:0},{code:'Variété',titles:45,frenchTitles:40,newTalentTitles:15,minSeparation:0},{code:'Oldies',titles:60,frenchTitles:35,newTalentTitles:0,minSeparation:0}];
+        state.clocks=[
+          {id:generateId(),name:'Matin',sequence:['Hits','Pop','Variété','Pop','Hits']},
+          {id:generateId(),name:'Après-midi',sequence:['Pop','Rock','Hits','Variété','Oldies']},
+          {id:generateId(),name:'Soir',sequence:['Oldies','Variété','Pop','Rock']}
+        ];
+        state.clockGrid={};
+        const matId=state.clocks[0].id;
+        const aprId=state.clocks[1].id;
+        const soirId=state.clocks[2].id;
+        for(let day=0;day<7;day++){
+          for(let h=0;h<24;h++){
+            if(h>=6&&h<12)state.clockGrid[`${day}-${h}`]=matId;
+            else if(h>=12&&h<19)state.clockGrid[`${day}-${h}`]=aprId;
+            else state.clockGrid[`${day}-${h}`]=soirId;
+          }
+        }
+        save();renderCategories(false);renderClocks();renderGrid();compute();renderResults()
+      });
+
+      q('#presetRadioC').addEventListener('click',()=>{
+        state.categories=[
+          {code:'Jazz',titles:200,frenchTitles:40,newTalentTitles:15,minSeparation:0},
+          {code:'Elec',titles:100,frenchTitles:35,newTalentTitles:20,minSeparation:0},
+          {code:'World',titles:120,frenchTitles:20,newTalentTitles:10,minSeparation:0},
+          {code:'Class',titles:80,frenchTitles:30,newTalentTitles:5,minSeparation:0},
+          {code:'Pop',titles:60,frenchTitles:30,newTalentTitles:12,minSeparation:90},
+          {code:'Rock',titles:70,frenchTitles:20,newTalentTitles:8,minSeparation:0},
+          {code:'Soul',titles:90,frenchTitles:15,newTalentTitles:6,minSeparation:0},
+          {code:'Nouv',titles:40,frenchTitles:20,newTalentTitles:25,minSeparation:60}
+        ];
+        state.clocks=[
+          {id:generateId(),name:'Matinale (7h-9h)',sequence:['Jazz','Pop','World','Nouv','Rock','Jazz','Soul']},
+          {id:generateId(),name:'Journée (9h-17h)',sequence:['Elec','Jazz','Pop','World','Class','Soul','Rock','Nouv']},
+          {id:generateId(),name:'Drive (17h-20h)',sequence:['Pop','Elec','Jazz','Nouv','Rock','World','Pop']},
+          {id:generateId(),name:'Soirée (20h-00h)',sequence:['Jazz','Elec','Class','Soul','World','Jazz']},
+          {id:generateId(),name:'Nuit (00h-7h)',sequence:['Class','Jazz','Soul','World','Jazz']}
+        ];
+        state.clockGrid={};
+        const ids=state.clocks.map(c=>c.id);
+        for(let day=0;day<5;day++){
+          for(let h=0;h<24;h++){
+            if(h>=7&&h<9)state.clockGrid[`${day}-${h}`]=ids[0];
+            else if(h>=9&&h<17)state.clockGrid[`${day}-${h}`]=ids[1];
+            else if(h>=17&&h<20)state.clockGrid[`${day}-${h}`]=ids[2];
+            else if(h>=20)state.clockGrid[`${day}-${h}`]=ids[3];
+            else state.clockGrid[`${day}-${h}`]=ids[4];
+          }
+        }
+        for(let day=5;day<7;day++){
+          for(let h=0;h<24;h++){
+            if(h>=9&&h<17)state.clockGrid[`${day}-${h}`]=ids[1];
+            else if(h>=17&&h<21)state.clockGrid[`${day}-${h}`]=ids[3];
+            else state.clockGrid[`${day}-${h}`]=ids[4];
+          }
+        }
+        save();renderCategories(false);renderClocks();renderGrid();compute();renderResults()
+      });
+
+      q('#version').addEventListener('click',()=>q('#modal').classList.add('show'));
+      q('#closeModal').addEventListener('click',()=>q('#modal').classList.remove('show'));
+      q('#modal').addEventListener('click',e=>{if(e.target.id==='modal')q('#modal').classList.remove('show')});
+      q('#assignModal').addEventListener('click',e=>{if(e.target.id==='assignModal')closeAssignModal()});
+      
+      q('#hoursPerDay').addEventListener('input',()=>{state.hoursPerDay=Number(q('#hoursPerDay').value||24);save();compute();renderResults()});
+      
+      q('#exportCSV').addEventListener('click',()=>{const headers=['Code','Nb titres','Total appels/jour','Appels/heure (moy.)','Passages titre/jour','Intervalle moyen'];const rows=computed.perCat.map(r=>[r.code||'—',r.titles||0,round(r.totalCallsPerDay,2),round(r.callsPerHourAvg,2),round(r.passesPerTitlePerDay,2),minutesToHHMM(r.intervalMin)]);const csv=[headers.join(','),...rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='resultats-rotations.csv';a.click();URL.revokeObjectURL(url)});
+      q('#exportJSON').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='preset-rotations-v3.json';a.click();URL.revokeObjectURL(url)});
+      q('#importJSON').addEventListener('click',()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{const f=inp.files[0];const rd=new FileReader();rd.onload=()=>{try{Object.assign(state,JSON.parse(rd.result));save();renderCategories(false);renderClocks();renderGrid();renderQuotaRegimes();compute();renderResults()}catch(e){alert('Fichier invalide')}};rd.readAsText(f)};inp.click()});
+      
+      load();
+      q('#hoursPerDay').value=state.hoursPerDay||24;
+      renderCategories(false);
+      renderClocks();
+      renderGrid();
+      renderQuotaRegimes();
+      compute();
+      renderResults();
+      updateQuickClockSelector();
+    });
+  </script>
+</body>
+</html>

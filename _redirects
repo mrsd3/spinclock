@@ -1,5 +1,0 @@
-/nova/home  /nova/               301
-/nova/login /nova/login.html     200
-/nova       /nova/               301
-/nova/*     /nova/index.html     200
-/*          /index.html          200

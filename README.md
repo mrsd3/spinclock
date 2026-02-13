@@ -27,7 +27,7 @@ Ouvrez `index.html` dans un navigateur. Aucun serveur requis, tout fonctionne c�
 
 1. Cliquez sur un **Preset** (Radio A, B ou C) pour charger une configuration exemple
 2. Allez dans l'onglet **Horloges** pour voir les séquences et la grille d'affectation
-3. Consultez l'onglet **Quotas français** pour vérifier la conformité ARCOM
+3. Consultez l'onglet **Quotas français** pour vérifier la conformité
 4. Ajustez les catégories, horloges et affectations selon vos besoins
 
 ### Créer sa propre configuration

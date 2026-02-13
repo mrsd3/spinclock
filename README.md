@@ -4,7 +4,7 @@ Simulez vos horloges, anticipez vos rotations musicales.
 
 **[spinclock.app](https://spinclock.app)**
 
-Spinclock est un simulateur de rotations musicales conçu pour les programmateurs radio. Il permet de planifier des horloges, visualiser les rotations par catégorie et vérifier la conformité aux quotas francophones ARCOM — le tout dans une interface web unique, sans installation.
+Spinclock est un simulateur de rotations musicales conçu pour les programmateurs radio. Il permet de planifier des horloges, visualiser les rotations par catégorie et vérifier la conformité aux quotas francophones — le tout dans une interface web unique, sans installation.
 
 ## Fonctionnalités
 

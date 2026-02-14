@@ -46,13 +46,8 @@ Ouvrez `index.html` dans un navigateur. Aucun serveur requis, tout fonctionne c�
 
 ## Auteur
 
-[MartialDem](https://martialdem.fr)
+[MartialDem](https://martialdem.fr) & Claude Code
 
-## Licence
+## 📄 Licence
 
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-
-Vous êtes libre de partager et adapter ce projet, sous les conditions suivantes :
-- **Attribution** — Vous devez créditer MartialDem
-- **Pas d'utilisation commerciale** — Utilisation non commerciale uniquement
-- **Partage dans les mêmes conditions** — Les modifications doivent être partagées sous la même licence
+Ce projet est sous licence **MIT**. Voir le fichier `LICENSE` pour plus de détails.
